@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/context";
 
-const EmailVerification = ({ onResend }) => {
-  const [loading, setLoading] = useState(false);
+const EmailVerification = () => {
   const [message, setMessage] = useState("");
   const location = useLocation();
   const { generateLink } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const email = location.state?.email; // Get email from navigation state
 
@@ -14,10 +15,10 @@ const EmailVerification = ({ onResend }) => {
   useEffect(() => {
     const fetchLink = async () => {
       try {
-        const res = await generateLink(email);
-        console.log(res);
-      } catch (error) {
-        console.error("Error generating verification link:", error);
+        const success = await generateLink(email);
+        console.log(success);
+      } catch (err) {
+        setMessage("falied sent link :", err);
       }
     };
 
@@ -26,23 +27,11 @@ const EmailVerification = ({ onResend }) => {
     }
   }, [email]);
 
-  // Handle resend verification email
-  const handleResend = async () => {
-    setLoading(true);
-    setMessage("");
-    try {
-      if (onResend) {
-        await onResend(email); // your resend API function
-        setMessage("Verification email sent!");
-      } else {
-        setMessage("Resend function not available.");
-      }
-    } catch (err) {
-      console.error(err);
-      setMessage("Failed to send verification email. Try again.");
-    } finally {
-      setLoading(false);
+  const handleCheck = () => {
+    if (user != null) {
+      navigate("/hub");
     }
+    alert("not verified");
   };
 
   if (!email) {
@@ -76,11 +65,10 @@ const EmailVerification = ({ onResend }) => {
         )}
 
         <button
-          onClick={handleResend}
-          disabled={loading}
+          onClick={handleCheck}
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200 disabled:opacity-50"
         >
-          {loading ? "Resending..." : "Resend Verification Email"}
+          Check
         </button>
       </div>
     </div>

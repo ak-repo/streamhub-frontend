@@ -29,3 +29,15 @@ api.interceptors.response.use(
   },
   (error) => Promise.reject(error)
 );
+
+// -------------------------------
+// Centralized Error Handler
+// -------------------------------
+
+export const handleError = (error) => {
+  const message =
+    error?.response?.data?.message || error?.message || "Something went wrong";
+
+  console.error("API Error:", message);
+  throw new Error(message);
+};

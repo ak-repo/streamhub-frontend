@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthContext } from "./context";
 import {
   generateLinkService,
@@ -10,63 +10,78 @@ import {
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  const isAuthenticated = !!user;
+  // // Load user safely on mount
+  // useEffect(() => {
+  //   try {
+  //     const savedUser = localStorage.getItem("user");
+  //     console.log("user: ", saveUser);
+  //     if (savedUser) {
+  //       setUser(JSON.parse(savedUser));
+  //     }
+  //   } catch (err) {
+  //     console.error("Invalid user in localStorage. Clearing...", err);
+  //     localStorage.removeItem("user"); // remove corrupted data
+  //   }
+  // }, []);
+
+  const saveUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
 
   const login = async (email, password) => {
     try {
       const res = await loginService(email, password);
-      console.log("login  ", res);
       if (res?.user) {
-        setUser(res.user);
-        return true; // return true on successful login
-      } else {
-        return false; // return false if login fails
+        saveUser(res.user);
+        return true;
       }
+      return false;
     } catch (error) {
       console.error("Login error:", error);
-      return false; // return false on error
+      return false;
     }
   };
 
   const register = async (form) => {
     try {
       const res = await registerService(form);
-      return res?.data?.link_send;
+      return res?.success || false;
     } catch (error) {
       console.error("Register error:", error);
-      return null;
+      return false;
     }
   };
 
   const verifyLink = async (email, token) => {
     try {
       const res = await verifyLinkService(email, token);
-      if (res.ok) {
-        console.log("user data: ", res.user);
-        setUser(res.user);
+      if (res.ok && res.user) {
+        saveUser(res.user);
       }
       return true;
     } catch (err) {
       console.error("Email verification error:", err);
+      return false;
     }
   };
 
   const generateLink = async (email) => {
     try {
       const res = await generateLinkService(email);
-      if (res.ok) {
-        console.log("user data: ", res.user);
-        setUser(res.user);
+      if (res.ok && res.user) {
+        saveUser(res.user);
       }
       return true;
     } catch (err) {
       console.error("Email verification error:", err);
+      return false;
     }
   };
 
   const logout = () => {
-    // logoutService();
     setUser(null);
+    localStorage.removeItem("user");
   };
 
   return (
@@ -74,12 +89,11 @@ function AuthProvider({ children }) {
       value={{
         user,
         setUser,
-        verifyLink,
         login,
-        logout,
-        generateLink,
-        isAuthenticated,
         register,
+        logout,
+        verifyLink,
+        generateLink,
       }}
     >
       {children}

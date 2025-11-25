@@ -1,45 +1,37 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-
-import AuthPage from "./pages/user/auth/AuthPage";
-import BottomNavigation from "./components/Navbar";
-// Dashboard Pages
-import FilesPage from "./pages/user/FilesPage";
-import ChatPage from "./pages/user/ChatPage";
-import NotificationsPage from "./pages/user/NotificationsPage";
-import ProfilePage from "./pages/user/ProfilePage";
-import NotFoundPage from "./pages/404";
-import EmailVerification from "./pages/user/auth/EmailVerification";
-import EmailVerified from "./pages/user/auth/EmailVerified";
-
-// Layout wrapper for pages with BottomNavigation
-function DashboardLayout() {
-  return (
-    <>
-      <Outlet />
-      <BottomNavigation />
-    </>
-  );
-}
+import { Outlet, useNavigate } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
+import { useAuth } from "./context/context";
+import { useEffect } from "react";
 
 export default function MainLayout() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user == null) {
+      navigate("/");
+    }
+  }, [user]);
+
   return (
-    <Routes>
-      {/* Public / Auth Routes */}
-      <Route path="/" element={<AuthPage />} />
-      <Route path="/verify" element={<EmailVerification />} />
-      <Route path="/verify-link" element={<EmailVerified />} />
-      <Route path="*" element={<NotFoundPage />} />
+    <div className="w-screen h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* Header - Fixed at top, full width */}
+      <header className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <Header />
+      </header>
 
-      {/* Dashboard Routes with BottomNavigation */}
-      <Route element={<DashboardLayout />}>
-        <Route path="files" element={<FilesPage />} />
-        <Route path="chat" element={<ChatPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-      </Route>
+      {/* Main Content Area - Takes remaining height */}
+      <div className="flex-1 flex min-h-0">
+        {/* Sidebar - Fixed width, scrollable chat list */}
+        <aside className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
+          <Sidebar />
+        </aside>
 
-      {/* Default redirect example */}
-      <Route path="/hub" element={<Navigate to="/files" replace />} />
-    </Routes>
+        {/* Main Chat Area - Flexible width */}
+        <main className="flex-1 min-w-0 bg-white dark:bg-gray-800">
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }

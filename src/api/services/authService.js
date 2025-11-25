@@ -1,24 +1,16 @@
 // src/services/authService.js
-import api from "../api";
-
-// -------------------------------
-// Centralized Error Handler
-// -------------------------------
-const handleError = (error) => {
-  const message =
-    error?.response?.data?.message || error?.message || "Something went wrong";
-
-  console.error("API Error:", message);
-  throw new Error(message);
-};
+import api, { handleError } from "../api";
 
 // -------------------------------
 // Public Auth APIs
 // -------------------------------
-export const loginService = async (data) => {
+export const loginService = async (email, password) => {
   try {
-    const res = await api.post("/auth/login", data);
-    return res;
+    const res = await api.post("/auth/login", {
+      email: email,
+      password: password,
+    });
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
@@ -27,7 +19,7 @@ export const loginService = async (data) => {
 export const registerService = async (data) => {
   try {
     const res = await api.post("/auth/register", data);
-    return res;
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
@@ -37,7 +29,7 @@ export const generateLinkService = async (data) => {
   console.log("Sending data:", data);
   try {
     const res = await api.post(
-      "/verify-gen",
+      "/auth/verify-gen",
       { email: data },
       {
         headers: {
@@ -45,7 +37,10 @@ export const generateLinkService = async (data) => {
         },
       }
     );
-    return res;
+    if (res?.success) {
+      return true;
+    }
+    return false;
   } catch (error) {
     console.error("Error generating link:", error);
     handleError(error); // custom error handler
@@ -53,11 +48,15 @@ export const generateLinkService = async (data) => {
 };
 export const verifyLinkService = async (email, token) => {
   try {
-    const res = await api.get(`/auth/verify-link?email=${email}&token=${token}`);
+    const res = await api.get(
+      `/auth/verify-link?email=${email}&token=${token}`
+    );
+    console.log("insides servuc:", res);
 
-    return res;
+    return res?.data;
   } catch (error) {
     handleError(error);
+    return error;
   }
 };
 
@@ -67,7 +66,7 @@ export const verifyLinkService = async (email, token) => {
 export const changePasswordService = async (data) => {
   try {
     const res = await api.post("/auth/password-change", data);
-    return res;
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
@@ -76,7 +75,7 @@ export const changePasswordService = async (data) => {
 export const sendOtpService = async (data) => {
   try {
     const res = await api.post("/auth/send-otp", data);
-    return res;
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
@@ -85,7 +84,7 @@ export const sendOtpService = async (data) => {
 export const verifyOtpService = async (data) => {
   try {
     const res = await api.post("/auth/verify-otp", data);
-    return res;
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
@@ -94,7 +93,7 @@ export const verifyOtpService = async (data) => {
 export const getMeService = async () => {
   try {
     const res = await api.get("/auth/me");
-    return res.data;
+    return res?.data;
   } catch (error) {
     handleError(error);
   }
