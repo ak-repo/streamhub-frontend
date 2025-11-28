@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../../context/context";
-import { verifyLinkService } from "../../../api/services/authService";
+import { useAuth } from "../../context/context";
+import { verifyLinkService } from "../../api/services/authService";
 
 const EmailVerified = () => {
   const [searchParams] = useSearchParams();
@@ -18,7 +18,7 @@ const EmailVerified = () => {
         console.log("Verification response:", data);
         setStatus("success");
         setTimeout(() => {
-          navigate("/hub");
+          navigate("/home");
         }, 2000);
       } catch (err) {
         console.log(err);

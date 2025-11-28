@@ -10,19 +10,30 @@ import {
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
-  // // Load user safely on mount
-  // useEffect(() => {
-  //   try {
-  //     const savedUser = localStorage.getItem("user");
-  //     console.log("user: ", saveUser);
-  //     if (savedUser) {
-  //       setUser(JSON.parse(savedUser));
-  //     }
-  //   } catch (err) {
-  //     console.error("Invalid user in localStorage. Clearing...", err);
-  //     localStorage.removeItem("user"); // remove corrupted data
-  //   }
-  // }, []);
+  // Load user safely on mount
+  // Load user from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (err) {
+      console.error("Invalid user in localStorage. Clearing...", err);
+      localStorage.removeItem("user");
+    }
+  }, []);
+
+  // Save user whenever it changes
+  useEffect(() => {
+    if (!user) return;
+
+    try {
+      localStorage.setItem("user", JSON.stringify(user));
+    } catch (err) {
+      console.error("Failed to store user:", err);
+    }
+  }, [user]);
 
   const saveUser = (userData) => {
     setUser(userData);

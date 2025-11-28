@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/context";
+import { useAuth } from "../../context/context";
 
 const EmailVerification = () => {
   const [message, setMessage] = useState("");
   const location = useLocation();
-  const { generateLink } = useAuth();
-  const { user } = useAuth();
+  const { generateLink,user } = useAuth()
   const navigate = useNavigate();
 
   const email = location.state?.email; // Get email from navigation state
@@ -29,7 +28,7 @@ const EmailVerification = () => {
 
   const handleCheck = () => {
     if (user != null) {
-      navigate("/hub");
+      navigate("/home");
     }
     alert("not verified");
   };

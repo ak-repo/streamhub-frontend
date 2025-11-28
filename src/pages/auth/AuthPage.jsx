@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Mail, Lock, User, Eye, EyeOff, Check, ArrowRight } from "lucide-react";
-import { useAction, useAuth } from "../../../context/context";
 import { useNavigate } from "react-router-dom";
-import Logo from "../../../components/Logo";
+import { useAuth } from "../../context/context";
+import Logo from "../../components/Logo";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,8 +10,8 @@ export default function AuthPage() {
   const [form, setForm] = useState({ username: "", password: "", email: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const { login, register } = useAuth();
-  const { navigate } = useAction();
+  const { login, register } = useAuth()
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +22,7 @@ export default function AuthPage() {
       if (isLogin) {
         const success = await login(form.email, form.password);
         if (success) {
-          navigate("/hub");
+          navigate("/home");
         } else {
           setMessage("Invalid login credentials");
         }
@@ -94,10 +94,9 @@ export default function AuthPage() {
           {/* Left Side - Branding */}
           <div className="hidden lg:flex flex-col bg-gradient-to-br from-blue-600/20 to-purple-600/20 p-12 justify-between border-r border-white/10 backdrop-blur-sm">
             <div>
-
               <div
                 className="flex items-center space-x-3 mb-12"
-                onClick={() => navigate("/hub")}
+                onClick={() => navigate("/home")}
               >
                 <Logo />
               </div>

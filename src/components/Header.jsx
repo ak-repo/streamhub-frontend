@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useAction, useAuth } from "../context/context";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/context";
 import Logo from "./Logo";
 import { useNavigate } from "react-router-dom";
 
@@ -8,58 +8,21 @@ function Header() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  const { profileMenuRef, setSelectedChat } = useAction();
-  const storageStats = {
-    used: 1.8,
-    total: 5,
-    percentage: (1.8 / 5) * 100,
-  };
+  useEffect(() => {
+    if (!user) {
+      navigate("/");
+    }
+  }, [user]);
 
   return (
     <div className="flex items-center pb-5 justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       {/* Logo Section */}
-      <div className="flex-1" onClick={() => setSelectedChat(false)}>
+      <div className="flex-1">
         <Logo />
       </div>
 
       {/* Right Section - Cloud Storage & User Controls */}
       <div className="flex items-center space-x-3">
-        {/* Cloud Storage - Minimal Version */}
-        <div className="flex items-center space-x-3 bg-gray-900 dark:bg-gray-750 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
-          {/* Storage Info */}
-          <div className="text-right">
-            <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              {storageStats.used}GB / {storageStats.total}GB
-            </div>
-            <div className="w-20 bg-gray-300 dark:bg-gray-600 rounded-full h-1.5 mt-1">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-blue-600 h-1.5 rounded-full"
-                style={{ width: `${storageStats.percentage}%` }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Upload Button */}
-          <button
-            className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
-            onClick={() => navigate("/hub/uploads")}
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* Notification Bell */}
         <button className="relative p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
           <svg
@@ -96,7 +59,7 @@ function Header() {
         </button>
 
         {/* User Profile */}
-        <div className="relative" ref={profileMenuRef}>
+        <div className="relative">
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
