@@ -1,32 +1,54 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/context";
 import Logo from "./Logo";
 import { useNavigate } from "react-router-dom";
 
 function Header() {
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const menuRef = useRef(null);
 
+  const initials = user?.username
+    ? user.username.slice(0, 2).toUpperCase()
+    : "US";
+
+  /** Close dropdown when clicking outside */
   useEffect(() => {
-    if (!user) {
-      navigate("/");
-    }
-  }, [user]);
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  /** Theme Toggle */
+  const toggleTheme = () => {
+    const html = document.documentElement;
+    html.classList.toggle("dark");
+    localStorage.setItem(
+      "theme",
+      html.classList.contains("dark") ? "dark" : "light"
+    );
+  };
 
   return (
-    <div className="flex items-center pb-5 justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      {/* Logo Section */}
-      <div className="flex-1">
+    <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 sticky top-0 z-40 select-none">
+      {/* Logo */}
+      <div className="flex items-center">
         <Logo />
       </div>
 
-      {/* Right Section - Cloud Storage & User Controls */}
       <div className="flex items-center space-x-3">
-        {/* Notification Bell */}
-        <button className="relative p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+        {/* Notification Button */}
+        <button
+          aria-label="Notifications"
+          className="relative p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+        >
           <svg
-            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -38,13 +60,17 @@ function Header() {
               d="M15 17h5l-5 5v-5zM10.24 8.56a5.97 5.97 0 01-4.66-7.4 1 1 0 00-1.2-1.2 7.97 7.97 0 006.16 9.91 5.97 5.97 0 013.9-1.38 5.97 5.97 0 014.66 7.4 1 1 0 001.2 1.2 7.97 7.97 0 00-6.16-9.91z"
             />
           </svg>
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 border border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
         </button>
 
         {/* Theme Toggle */}
-        <button className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+        >
           <svg
-            className="w-5 h-5 text-gray-600 dark:text-gray-400"
+            className="w-5 h-5 text-gray-600 dark:text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -58,21 +84,21 @@ function Header() {
           </svg>
         </button>
 
-        {/* User Profile */}
-        <div className="relative">
+        {/* Profile */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+            onClick={() => setShowMenu((v) => !v)}
+            aria-haspopup="true"
+            aria-expanded={showMenu}
+            className="flex items-center space-x-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
           >
-            {/* User Avatar */}
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-semibold text-xs">JD</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">
+              {initials}
             </div>
 
-            {/* Chevron Icon */}
             <svg
-              className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${
-                showProfileMenu ? "rotate-180" : ""
+              className={`w-4 h-4 text-gray-600 dark:text-gray-300 transform transition ${
+                showMenu ? "rotate-180" : ""
               }`}
               fill="none"
               stroke="currentColor"
@@ -87,20 +113,23 @@ function Header() {
             </svg>
           </button>
 
-          {/* Profile Dropdown Menu */}
-          {showProfileMenu && (
-            <div className="absolute right-0 top-12 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-2 z-50">
-              {/* User Summary */}
+          {/* Dropdown */}
+          {showMenu && (
+            <div
+              className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-2 animate-fadeIn z-50"
+              role="menu"
+            >
+              {/* User Info */}
               <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
-                    <span className="text-white font-semibold text-xs">JD</span>
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex items-center justify-center text-white text-xs font-bold">
+                    {initials}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {user && user?.username}
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {user?.username}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       Online
                     </div>
                   </div>
@@ -108,92 +137,36 @@ function Header() {
               </div>
 
               {/* Menu Items */}
-              <div className="py-1">
-                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <svg
-                    className="w-4 h-4 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  <span>Profile</span>
-                </button>
+              <button
+                className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
+                onClick={() => navigate("/profile")}
+              >
+                <span>Profile</span>
+              </button>
 
-                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <svg
-                    className="w-4 h-4 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 17h5l-5 5v-5zM10.24 8.56a5.97 5.97 0 01-4.66-7.4 1 1 0 00-1.2-1.2 7.97 7.97 0 006.16 9.91 5.97 5.97 0 013.9-1.38 5.97 5.97 0 014.66 7.4 1 1 0 001.2 1.2 7.97 7.97 0 00-6.16-9.91z"
-                    />
-                  </svg>
-                  <span>Notifications</span>
-                </button>
+              <button
+                className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
+                onClick={() => navigate("/settings")}
+              >
+                <span>Settings</span>
+              </button>
 
-                <button className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <svg
-                    className="w-4 h-4 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span>Settings</span>
-                </button>
-              </div>
+              <button className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2">
+                <span>Notifications</span>
+              </button>
 
-              {/* Bottom Section */}
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-1">
-                <button
-                  onClick={() => logout()}
-                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  <span>Sign Out</span>
-                </button>
-              </div>
+              {/* Logout */}
+              <button
+                onClick={logout}
+                className="w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+              >
+                <span>Sign Out</span>
+              </button>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 

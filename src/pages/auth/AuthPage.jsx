@@ -10,29 +10,49 @@ export default function AuthPage() {
   const [form, setForm] = useState({ username: "", password: "", email: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const { login, register } = useAuth()
+  const [errors, setErrors] = useState({});
+  const { login, register } = useAuth();
   const navigate = useNavigate();
+
+  const passwordMinLength = 6;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!isLogin && form.username.trim().length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
+
+    if (!emailRegex.test(form.email)) {
+      newErrors.email = "Invalid email address";
+    }
+    if (!isLogin) {
+      if (form.password.length < passwordMinLength) {
+        newErrors.password = `Password must be at least ${passwordMinLength} characters`;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setMessage("");
 
+    if (!validate()) return; // stop submission if validation fails
+
+    setLoading(true);
     try {
       if (isLogin) {
         const success = await login(form.email, form.password);
-        if (success) {
-          navigate("/home");
-        } else {
-          setMessage("Invalid login credentials");
-        }
+        if (success) navigate("/home");
+        else setMessage("Invalid login credentials");
       } else {
         const success = await register(form);
-        if (success) {
-          navigate("/verify-gen", { state: { email: form.email } });
-        } else {
-          setMessage("Registration failed");
-        }
+        if (success) navigate("/verify-gen", { state: { email: form.email } });
+        else setMessage("Registration failed");
       }
     } catch (err) {
       console.error(err);
@@ -83,7 +103,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -100,20 +119,17 @@ export default function AuthPage() {
               >
                 <Logo />
               </div>
-
               <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
                 Your Central Hub for{" "}
                 <span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
                   Files & Collaboration
                 </span>
               </h2>
-
               <p className="text-blue-100/80 text-lg mb-10 leading-relaxed">
                 Streamline your workflow with seamless file sharing, real-time
                 communication, and smart notifications—all in one powerful
                 platform.
               </p>
-
               <div className="space-y-4">
                 {[
                   "Secure file storage & sharing",
@@ -131,7 +147,6 @@ export default function AuthPage() {
                 ))}
               </div>
             </div>
-
             <p className="text-blue-100/60 text-sm">
               © 2024 StreamHub. All rights reserved.
             </p>
@@ -140,7 +155,6 @@ export default function AuthPage() {
           {/* Right Side - Auth Form */}
           <div className="p-8 lg:p-12 bg-gradient-to-br from-white/10 to-white/5 flex flex-col justify-center">
             <div className="max-w-md mx-auto w-full">
-              {/* Mobile Logo */}
               <div className="lg:hidden flex justify-center mb-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-400 rounded-lg flex items-center justify-center">
@@ -150,7 +164,6 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* Header */}
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-white">
                   {isLogin ? "Welcome back" : "Join StreamHub"}
@@ -162,7 +175,6 @@ export default function AuthPage() {
                 </p>
               </div>
 
-              {/* Toggle Switch */}
               <div className="mb-8">
                 <div className="bg-white/10 rounded-xl p-1.5 backdrop-blur-sm border border-white/20">
                   <div className="grid grid-cols-2 gap-1">
@@ -183,7 +195,6 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* Form Container */}
               <form className="space-y-5" onSubmit={handleSubmit}>
                 {message && (
                   <p className="text-red-400 text-sm mb-2 text-center">
@@ -191,7 +202,6 @@ export default function AuthPage() {
                   </p>
                 )}
 
-                {/* OAuth Buttons */}
                 <div className="grid grid-cols-2 gap-3">
                   {oauthProviders.map((provider) => (
                     <button
@@ -207,7 +217,6 @@ export default function AuthPage() {
                   ))}
                 </div>
 
-                {/* Divider */}
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-white/20"></div>
@@ -219,7 +228,6 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                {/* Form Fields */}
                 <div className="space-y-4">
                   {!isLogin && (
                     <div>
@@ -234,6 +242,11 @@ export default function AuthPage() {
                           placeholder="Full name"
                           className="w-full bg-white/10 border border-white/20 pl-12 pr-4 py-3 text-white placeholder-white/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm hover:border-white/30"
                         />
+                        {errors.username && (
+                          <p className="text-red-400 text-xs mt-1">
+                            {errors.username}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -250,6 +263,11 @@ export default function AuthPage() {
                       required
                       className="w-full bg-white/10 border border-white/20 pl-12 pr-4 py-3 text-white placeholder-white/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm hover:border-white/30"
                     />
+                    {errors.email && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
 
                   <div className="relative group">
@@ -275,6 +293,11 @@ export default function AuthPage() {
                         <Eye className="w-5 h-5" />
                       )}
                     </button>
+                    {errors.password && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.password}
+                      </p>
+                    )}
                   </div>
 
                   {isLogin && (
@@ -321,7 +344,6 @@ export default function AuthPage() {
                   )}
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -339,7 +361,6 @@ export default function AuthPage() {
                   )}
                 </button>
 
-                {/* Switch Auth Mode */}
                 <div className="text-center pt-2">
                   <p className="text-sm text-blue-100/70">
                     {isLogin

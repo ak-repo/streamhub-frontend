@@ -4,44 +4,43 @@ import axios from "axios";
 /**
  * Upload a file using presigned URL
  */
-export const uploadUrlService = async (file, ownerId) => {
+export const uploadFile = async (file, userId, channelId, isPublic) => {
   try {
     if (!file) {
       alert("Select a file first!");
       return null;
     }
 
-    // STEP 1: Request presigned upload URL
-    const res = await api.post(`/files/upload-url`, {
-      owner_id: ownerId,
+    console.log("chann id:", channelId);
+
+    // 1. Request presigned upload URL
+    const { data } = await api.post(`/files/upload-url`, {
+      ownerId: userId,
       filename: file.name,
       size: file.size,
-      mime: file.type,
-      is_public: false,
+      mimeType: file.type,
+      isPublic: isPublic,
+      channelId: channelId,
     });
 
-    const uploadURL = res?.data?.upload_url;
-    const fileId = res?.data?.file_id;
+    const uploadUrl = data?.upload_url;
+    const fileId = data?.file_id;
+    console.log("file id ", fileId);
 
-    console.log("Presigned URL:", uploadURL);
-    console.log("File ID:", fileId);
+    // 2. Upload directly to S3 / MinIO
+    // await axios.put(uploadUrl, file, {
+    //   headers: {
+    //     "Content-Type": file.type,
+    //   },
+    // });
 
-    // STEP 2: Upload file directly to MinIO/S3 using axios
-    await axios.put(uploadURL, file, {
-      headers: {
-        "Content-Type": file.type,
-      },
+    // 3. Confirm upload
+    const res = await api.post(`/files/confirm`, {
+      fileId: fileId,
     });
 
-    // STEP 3: Confirm upload to backend
-    await api.post(`/files/confirm`, {
-      owner_id: ownerId,
-      file_id: fileId,
-    });
-
-    console.log("Upload complete");
-
-    return fileId; // return file id for chat usage
+    console.log("file upload confirm res: ", res);
+    return fileId;
   } catch (err) {
     console.error("Upload failed:", err);
     throw err;
@@ -49,13 +48,18 @@ export const uploadUrlService = async (file, ownerId) => {
 };
 
 /**
- * Load all files for an owner
+ * List files for a channel
  */
-export const loadFileService = async (ownerId) => {
+export const listFilesByChannel = async (userId, channelId) => {
   try {
-    const res = await api.get(`/files/${ownerId}`);
-    console.log("Files:", res.data.files);
-    return res.data.files;
+    const res = await api.get(`/files`, {
+      params: {
+        channelId: channelId, // <-- camelCase
+        requesterId: userId, // <-- camelCase
+      },
+    });
+
+    return res.data;
   } catch (err) {
     console.error("Failed to load files:", err);
     throw err;
@@ -65,14 +69,20 @@ export const loadFileService = async (ownerId) => {
 /**
  * Get a temporary download URL
  */
-export const downloadUrlService = async (fileId, ownerId) => {
+// FileID        string `json:"fileId"`
+// 	ExpireSeconds int64  `json:"expireSeconds"`
+// 	RequesterID   string `json:"requesterId"`
+export const downloadUrl = async (fileId, userId, seconds) => {
   try {
     const res = await api.get(
-      `/download-url?file_id=${fileId}&owner_id=${ownerId}&expiry=300`
+      `/files/download-url?fileId=${fileId}&requesterId=${userId}&expireSeconds=${seconds}`
     );
+    console.log("res for download:", res);
 
-    console.log("Download URL:", res.data.download_url);
-    return res.data.download_url;
+    const url = res.data?.download_url;
+    if (!url) throw new Error("No download URL returned");
+
+    return url;
   } catch (err) {
     console.error("Failed to get download URL:", err);
     throw err;

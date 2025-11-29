@@ -4,8 +4,8 @@ import { useAuth, useChannel } from "../../../context/context";
 const GATEWAY_WS = "ws://localhost:8080/api/v1/ws";
 
 export default function ChatArea() {
-  const { user } = useAuth(); // user: {id, username, email...}
-  const { chanID, messages, setMessages } = useChannel(); // selected channel id
+  const { user } = useAuth();
+  const { chanID, messages, setMessages,  setRefMsg } = useChannel();
 
   const [inputMessage, setInputMessage] = useState("");
   const [status, setStatus] = useState("disconnected");
@@ -13,16 +13,16 @@ export default function ChatArea() {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Reset messages on channel change
+  // Trigger message reload once at mount
   useEffect(() => {
-    setMessages([]);
-  }, [chanID]);
+    setRefMsg((prev) => !prev);
+  }, []);
 
-  // Connect WebSocket when channel changes
+  // Connect WebSocket on channel change
   useEffect(() => {
     if (!chanID || !user?.id) return;
 
-    // Close existing connection
+    // Close old connection
     if (socketRef.current) {
       socketRef.current.close();
     }
@@ -33,7 +33,6 @@ export default function ChatArea() {
     ws.onopen = () => {
       setStatus("connected");
 
-      // JOIN channel
       ws.send(
         JSON.stringify({
           type: "JOIN",
@@ -46,7 +45,9 @@ export default function ChatArea() {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        setMessages((prev) => [...prev, msg]);
+
+        // Guarantee array update
+        setMessages((prev) => (Array.isArray(prev) ? [...prev, msg] : [msg]));
       } catch (err) {
         console.error("WS parse error:", err);
       }
@@ -58,11 +59,12 @@ export default function ChatArea() {
     return () => ws.close();
   }, [chanID, user?.id]);
 
-  // Auto-scroll to bottom when new messages come
+  // Auto-scroll when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Send message
   const sendMessage = (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || status !== "connected") return;
@@ -81,63 +83,87 @@ export default function ChatArea() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* MESSAGES */}
-      <main className="flex-1 p-4 overflow-y-auto space-y-4">
-        {messages &&
-          messages.map((msg, idx) => {
-            const isMe = msg.user_id === user?.id;
-
-            return (
-              <div
-                key={idx}
-                className={`flex items-start ${
-                  isMe ? "justify-end" : "justify-start"
-                }`}
-              >
-                {/* OTHER USERS (LEFT) */}
-                {!isMe && (
-                  <div className="flex flex-col max-w-[70%]">
-                    <p className="text-xs font-semibold text-gray-600 mb-1 pl-1">
-                      {msg.username || msg.user_id}
-                    </p>
-
-                    <div className="bg-white border rounded-lg p-3 shadow-sm">
-                      <p className="text-gray-800 break-words">{msg.content}</p>
-
-                      <span className="text-[10px] text-gray-400 mt-1 block">
-                        {msg.timestamp_ms
-                          ? new Date(msg.timestamp_ms).toLocaleTimeString()
-                          : "Just now"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* MY MESSAGES (RIGHT) */}
-                {isMe && (
-                  <div className="max-w-[70%]">
-                    <div className="bg-blue-600 text-white rounded-lg p-3 shadow-sm">
-                      <p className="break-words">{msg.content}</p>
-
-                      <span className="text-[10px] text-blue-200 mt-1 block text-right">
-                        {msg.timestamp_ms
-                          ? new Date(msg.timestamp_ms).toLocaleTimeString()
-                          : "Just now"}
-                      </span>
-                    </div>
-                  </div>
-                )}
+    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
+          <div className="p-4 space-y-3">
+            {/* Empty state */}
+            {Array.isArray(messages) && messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-12">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm">No messages yet</p>
+                <p className="text-xs mt-1">Start a conversation</p>
               </div>
-            );
-          })}
+            ) : (
+              Array.isArray(messages) &&
+              messages.map((msg, idx) => {
+                const isMe = msg?.sender_id === user?.id;
 
-        <div ref={messagesEndRef} />
-      </main>
+                return (
+                  <div
+                    key={idx}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
+                        isMe
+                          ? "bg-gray-900 text-white"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                      }`}
+                    >
+                      {!isMe && (
+                        <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          {msg.username || msg.user_id}
+                        </div>
+                      )}
 
-      {/* INPUT */}
-      <footer className="bg-white p-4 border-t">
-        <form onSubmit={sendMessage} className="max-w-4xl mx-auto flex gap-2">
+                      {/* Message */}
+                      <div className="text-sm break-words">{msg.content}</div>
+
+                      {/* Timestamp */}
+                      <div
+                        className={`text-xs mt-1 ${
+                          isMe
+                            ? "text-gray-400 text-right"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
+                        {msg.timestamp_ms
+                          ? new Date(msg.timestamp_ms).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Now"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      </div>
+
+      {/* Input */}
+      <div className="flex-shrink-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+        <form onSubmit={sendMessage} className="flex items-end space-x-2">
           <input
             type="text"
             value={inputMessage}
@@ -145,21 +171,48 @@ export default function ChatArea() {
             placeholder={
               status === "connected" ? "Type a message..." : "Connecting..."
             }
-            className="flex-1 border rounded-full px-4 py-2 
-                       focus:outline-none focus:border-blue-500 
-                       focus:ring-1 focus:ring-blue-500"
+            className="flex-1 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 outline-none focus:ring-1 focus:ring-gray-400 text-sm"
           />
 
           <button
             type="submit"
-            disabled={status !== "connected"}
-            className="bg-blue-600 text-white px-4 py-2 rounded-full 
-                       hover:bg-blue-700 disabled:bg-gray-400 transition"
+            disabled={!inputMessage.trim() || status !== "connected"}
+            className={`p-3 rounded-lg text-sm font-medium transition-colors ${
+              inputMessage.trim() && status === "connected"
+                ? "bg-gray-900 text-white hover:bg-gray-800"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+            }`}
           >
-            Send
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              />
+            </svg>
           </button>
         </form>
-      </footer>
+
+        {/* Status */}
+        <div className="flex items-center justify-center mt-2">
+          <div
+            className={`w-2 h-2 rounded-full mr-2 ${
+              status === "connected"
+                ? "bg-green-500 animate-pulse"
+                : status === "error"
+                ? "bg-red-500"
+                : "bg-gray-400"
+            }`}
+          ></div>
+          <span className="text-xs text-gray-500 capitalize">{status}</span>
+        </div>
+      </div>
     </div>
   );
 }
