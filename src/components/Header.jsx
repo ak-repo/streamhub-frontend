@@ -35,10 +35,14 @@ function Header() {
   };
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 sticky top-0 z-40 select-none">
+    <header className="flex items-center justify-between px-10 py-4  dark:bg-gray-900 sticky top-0 z-40 select-none">
       {/* Logo */}
-      <div className="flex items-center">
+      <div className="flex pl-50 items-center">
         <Logo />
+      </div>
+
+      <div className="flex pl-50 items-center text-sky-400">
+        <input type="text" placeholder="search...." className="text-sky-600" />
       </div>
 
       <div className="flex items-center space-x-3">
@@ -139,14 +143,14 @@ function Header() {
               {/* Menu Items */}
               <button
                 className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                onClick={() => navigate("/profile")}
+                onClick={() => navigate("/home/profile")}
               >
                 <span>Profile</span>
               </button>
 
               <button
                 className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
-                onClick={() => navigate("/settings")}
+                onClick={() => navigate("/home/settings")}
               >
                 <span>Settings</span>
               </button>

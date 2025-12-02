@@ -1,5 +1,5 @@
 // src/services/authService.js
-import api, { handleError } from "../api";
+import api, { handleError, handleSuccess } from "../api";
 
 // -------------------------------
 // Public Auth APIs
@@ -10,6 +10,7 @@ export const loginService = async (email, password) => {
       email: email,
       password: password,
     });
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);
@@ -19,6 +20,7 @@ export const loginService = async (email, password) => {
 export const registerService = async (data) => {
   try {
     const res = await api.post("/auth/register", data);
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);
@@ -51,8 +53,7 @@ export const verifyLinkService = async (email, token) => {
     const res = await api.get(
       `/auth/verify-link?email=${email}&token=${token}`
     );
-    console.log("insides servuc:", res);
-
+    handleSuccess(res?.message)
     return res?.data;
   } catch (error) {
     handleError(error);

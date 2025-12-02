@@ -1,99 +1,91 @@
-import api, { handleError } from "../api";
+import api, { handleError, handleSuccess } from "../api";
 
 export const createChannel = async (name, userId) => {
   if (!name) return;
   try {
     const res = await api.post("/channels/create", {
       name: name,
-      creator_id: userId,
+      creatorId: userId, // changed from creator_id
     });
-    // console.log("channel creation response:", res);
-    const data = res?.data;
-    if (data.channel_id) {
-      alert(
-        `Channel Created!\nID: ${data.channel_id}\n(Share this ID with others)`
-      );
-    }
-  } catch (err) {
-    handleError(err);
-  }
-};
-
-export const listChannels = async (userId) => {
-  try {
-    const res = await api.get(`/channels/${userId}`);
-    // console.log("channel listing response: ", res);
+    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const joinChannel = async (channel_id, user_id) => {
+export const listChannels = async () => {
+  try {
+    const res = await api.get(`/channels/`);
+    handleSuccess(res?.message)
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const joinChannel = async (channelId, userId) => {
   try {
     const res = await api.post(`/channels/join`, {
-      channel_id: channel_id,
-      user_id: user_id,
+      channelId: channelId, // changed from channel_id
+      userId: userId, // changed from user_id
     });
-    // console.log("channel join response: ", res);
+    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const getChannel = async (channel_id) => {
+export const getChannel = async (channelId) => {
   try {
-    const res = await api.get(`/channels/channel/${channel_id}`);
-    // console.log("single channel response: ", res);
+    const res = await api.get(`/channels/channel/${channelId}`);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const getMembers = async (channel_id) => {
+export const getMembers = async (channelId) => {
   try {
-    const res = await api.get(`/channels/members/${channel_id}`);
-    // console.log("channel members response: ", res);
+    const res = await api.get(`/channels/members/${channelId}`);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const getMsgHistory = async (channel_id) => {
+export const getMsgHistory = async (channelId) => {
+  console.log(channelId, "id");
   try {
-    const res = await api.get(`/channels/${channel_id}/history`);
-    // console.log("msg history response:  ", res);
+    const res = await api.get(`/channels/${channelId}/history`);
+    console.log(res);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const leaveChannel = async (chanID, userID) => {
+export const leaveChannel = async (channelId, userId) => {
+  console.log("leave: ", channelId, " u:", userId);
   try {
     const res = await api.post(`/channels/leave`, {
-      channel_id: chanID,
-      user_id: userID,
+      channelId: channelId,
+      userId: userId,
     });
-
+    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const deleteChannel = async (chanID, userID) => {
+export const deleteChannel = async (channelId, userId) => {
   try {
-    const res = await api.delete("/channels/delete", {
-      data: {
-        channelId: chanID,
-        userId: userID,
-      },
-    });
-
+    const res = await api.delete(
+      `/channels/delete?requesterId=${userId}&channelId=${channelId}`
+    );
+    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);

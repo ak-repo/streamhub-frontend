@@ -10,6 +10,9 @@ import { listFilesByChannel } from "../api/services/fileService";
 function ChannelProvider({ children }) {
   const [channel, setChannel] = useState(null);
   const [members, setMembers] = useState([]);
+  const [isOwner, setOwner] = useState(false);
+  const [isMember, setMember] = useState(false);
+
   const [messages, setMessages] = useState([]);
   const [files, setFiles] = useState([]);
   const [chanID, setChanID] = useState("");
@@ -24,24 +27,38 @@ function ChannelProvider({ children }) {
     const fetchChannelData = async () => {
       try {
         const data1 = await getChannel(chanID);
-        setChannel(data1?.channel || null);
+        const channelData = data1?.channel || null;
+        setChannel(channelData);
 
         const data2 = await getMembers(chanID);
-        setMembers(Array.isArray(data2?.members) ? data2.members : []);
+        const membersData = Array.isArray(data2?.members) ? data2.members : [];
+        setMembers(membersData);
 
         const data3 = await getMsgHistory(chanID);
         setMessages(Array.isArray(data3?.messages) ? data3.messages : []);
 
         const data4 = await listFilesByChannel(user?.id, chanID);
         setFiles(Array.isArray(data4?.files) ? data4.files : []);
+
+        setOwner(channelData?.createdBy === user?.id);
+
+        setMember(membersData.some((member) => member.userId === user?.id));
       } catch (err) {
         console.error("Failed to fetch channel details:", err);
         setChannel(null);
         setMembers([]);
-        setMessages([]); // <--- safe fallback
+        setMessages([]);
         setFiles([]);
+
+        // ---- Reset ownership/member flags on failure ----
+        setOwner(false);
+        setMember(false);
       }
     };
+
+    // Reset ownership + membership before fetching new channel
+    setOwner(false);
+    setMember(false);
 
     fetchChannelData();
   }, [chanID, user?.id]);
@@ -56,14 +73,14 @@ function ChannelProvider({ children }) {
         setMessages(Array.isArray(data3?.messages) ? data3.messages : []);
       } catch (err) {
         console.error("Failed to fetch chat history:", err);
-        setMessages([]); // <--- safe fallback
+        setMessages([]);
       }
     };
 
     fetchMSG();
   }, [refMsg, chanID]);
 
-  // Re-fetch messages when refMsg toggles
+  // Re-fetch files when refFile toggles
   useEffect(() => {
     if (!chanID) return;
 
@@ -73,7 +90,7 @@ function ChannelProvider({ children }) {
         setFiles(Array.isArray(data?.files) ? data.files : []);
       } catch (err) {
         console.error("Failed to fetch files", err);
-        setFiles([]); // <--- safe fallback
+        setFiles([]);
       }
     };
 
@@ -95,6 +112,8 @@ function ChannelProvider({ children }) {
         setRefMsg,
         refFile,
         setRefFile,
+        isOwner,
+        isMember,
       }}
     >
       {children}

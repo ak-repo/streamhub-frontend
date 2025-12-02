@@ -8,7 +8,7 @@ import {
 
 export default function ChannelPage() {
   const { id } = useParams();
-  const { setChanID, channel, members } = useChannel();
+  const { setChanID, channel, members, isOwner, isMember } = useChannel();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLeaving, setIsLeaving] = useState(false);
@@ -17,8 +17,6 @@ export default function ChannelPage() {
     setChanID(id);
   }, [id]);
 
-  const isOwner = channel?.created_by === user?.id;
-  const isMember = members?.some((member) => member.user_id === user?.id);
 
   const handleLeaveOrDelete = async () => {
     if (!user?.id || !channel) return;
@@ -32,13 +30,13 @@ export default function ChannelPage() {
             "Are you sure you want to delete this channel? This action cannot be undone."
           )
         ) {
-          await deleteChannel(channel.channel_id, user.id);
+          await deleteChannel(channel.channelId, user.id);
           navigate("/home");
         }
       } else {
         // Member can leave the channel
         if (window.confirm("Are you sure you want to leave this channel?")) {
-          await leaveChannel(channel.channel_id, user.id);
+          await leaveChannel(channel?.channelId, user?.id);
           navigate("/home");
         }
       }
@@ -82,7 +80,7 @@ export default function ChannelPage() {
           {/* Channel Info */}
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-gray-900 to-gray-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-semibold text-sm">
+              <span className="text-sky-500 font-semibold text-sm">
                 {channel?.name?.charAt(0).toUpperCase() || "C"}
               </span>
             </div>
@@ -100,13 +98,13 @@ export default function ChannelPage() {
               {/* Channel ID with small copy button */}
               <div className="flex items-center space-x-2">
                 <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                  {channel?.channel_id || "Loading..."}
+                  {channel?.channelId || "Loading..."}
                 </p>
 
                 {/* Copy Button */}
                 <button
                   onClick={() =>
-                    navigator.clipboard.writeText(channel?.channel_id || "")
+                    navigator.clipboard.writeText(channel?.channelId || "")
                   }
                   className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
                   title="Copy Channel ID"

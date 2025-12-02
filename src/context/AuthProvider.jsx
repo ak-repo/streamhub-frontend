@@ -6,9 +6,11 @@ import {
   registerService,
   verifyLinkService,
 } from "../api/services/authService";
+import { useNavigate } from "react-router-dom";
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   // Load user safely on mount
   // Load user from localStorage on mount
@@ -45,6 +47,11 @@ function AuthProvider({ children }) {
       const res = await loginService(email, password);
       if (res?.user) {
         saveUser(res.user);
+        if (res?.user?.role == "super-admin") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/home");
+        }
         return true;
       }
       return false;

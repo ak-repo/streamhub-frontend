@@ -11,35 +11,35 @@ export const uploadFile = async (file, userId, channelId, isPublic) => {
       return null;
     }
 
-    console.log("chann id:", channelId);
+    console.log("channel id:", channelId);
 
     // 1. Request presigned upload URL
     const { data } = await api.post(`/files/upload-url`, {
-      ownerId: userId,
-      filename: file.name,
+      ownerId: userId, // camelCase
+      filename: file.name, // already camelCase
       size: file.size,
       mimeType: file.type,
       isPublic: isPublic,
-      channelId: channelId,
+      channelId: channelId, // camelCase
     });
 
-    const uploadUrl = data?.upload_url;
-    const fileId = data?.file_id;
-    console.log("file id ", fileId);
+    const uploadUrl = data?.uploadUrl; // changed from upload_url
+    const fileId = data?.fileId; // changed from file_id
+    console.log("file id:", fileId);
 
     // 2. Upload directly to S3 / MinIO
-    // await axios.put(uploadUrl, file, {
-    //   headers: {
-    //     "Content-Type": file.type,
-    //   },
-    // });
+    await axios.put(uploadUrl, file, {
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
 
     // 3. Confirm upload
     const res = await api.post(`/files/confirm`, {
-      fileId: fileId,
+      fileId: fileId, // camelCase
     });
 
-    console.log("file upload confirm res: ", res);
+    console.log("file upload confirm res:", res);
     return fileId;
   } catch (err) {
     console.error("Upload failed:", err);
@@ -54,8 +54,8 @@ export const listFilesByChannel = async (userId, channelId) => {
   try {
     const res = await api.get(`/files`, {
       params: {
-        channelId: channelId, // <-- camelCase
-        requesterId: userId, // <-- camelCase
+        channelId: channelId, // camelCase
+        requesterId: userId, // camelCase
       },
     });
 
@@ -69,17 +69,13 @@ export const listFilesByChannel = async (userId, channelId) => {
 /**
  * Get a temporary download URL
  */
-// FileID        string `json:"fileId"`
-// 	ExpireSeconds int64  `json:"expireSeconds"`
-// 	RequesterID   string `json:"requesterId"`
-export const downloadUrl = async (fileId, userId, seconds) => {
+export const downloadUrl = async (fileId, userId, expireSeconds) => {
   try {
     const res = await api.get(
-      `/files/download-url?fileId=${fileId}&requesterId=${userId}&expireSeconds=${seconds}`
+      `/files/download-url?fileId=${fileId}&requesterId=${userId}&expireSeconds=${expireSeconds}`
     );
-    console.log("res for download:", res);
 
-    const url = res.data?.download_url;
+    const url = res.data?.downloadUrl; // changed from download_url
     if (!url) throw new Error("No download URL returned");
 
     return url;

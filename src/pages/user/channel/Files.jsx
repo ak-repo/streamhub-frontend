@@ -122,9 +122,9 @@ export default function Files() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+    <div className="h-full flex flex-col  dark:bg-gray-800">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-sky-700 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -136,7 +136,7 @@ export default function Files() {
           </div>
 
           {/* Upload Button */}
-          <label className="flex items-center space-x-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer">
+          <label className="flex items-center space-x-2 px-4 py-2 bg-sky-500 hover:bg-sky-700 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -163,7 +163,7 @@ export default function Files() {
 
       {/* Files List */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
+        <div className="h-full overflow-y-auto  dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
           <div className="p-4">
             {isUploading && (
               <div className="mb-4 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
@@ -195,7 +195,7 @@ export default function Files() {
                 {files.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center space-x-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                    className="flex items-center space-x-3 p-3 rounded-lg border border-sky-700 dark:border-gray-700 hover:bg-sky-950 dark:hover:bg-gray-750 transition-colors"
                   >
                     {/* File Icon */}
                     <div className="flex-shrink-0 w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
@@ -214,7 +214,9 @@ export default function Files() {
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Uploaded by{" "}
-                        {file.owner_id === user?.id ? "you" : "user"}
+                        {file.ownerId === user?.id
+                          ? "you"
+                          : file?.username || "user"}
                       </div>
                     </div>
 

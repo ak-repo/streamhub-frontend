@@ -27,7 +27,7 @@ export default function ChatArea() {
       socketRef.current.close();
     }
 
-    const ws = new WebSocket(`${GATEWAY_WS}?user_id=${user.id}`);
+    const ws = new WebSocket(`${GATEWAY_WS}?userId=${user.id}`);
     socketRef.current = ws;
 
     ws.onopen = () => {
@@ -36,8 +36,8 @@ export default function ChatArea() {
       ws.send(
         JSON.stringify({
           type: "JOIN",
-          channel_id: chanID,
-          user_id: user.id,
+          channelId: chanID,
+         userId: user.id,
         })
       );
     };
@@ -71,8 +71,8 @@ export default function ChatArea() {
 
     const payload = {
       type: "MESSAGE",
-      channel_id: chanID,
-      user_id: user.id,
+      channelId: chanID,
+     userId: user.id,
       username: user.username,
       content: inputMessage,
       timestamp_ms: Date.now(),
@@ -112,7 +112,7 @@ export default function ChatArea() {
             ) : (
               Array.isArray(messages) &&
               messages.map((msg, idx) => {
-                const isMe = msg?.sender_id === user?.id;
+                const isMe = msg?.senderId === user?.id;
 
                 return (
                   <div

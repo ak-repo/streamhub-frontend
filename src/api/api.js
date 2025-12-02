@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const api = axios.create({
   baseURL: " http://127.0.0.1:8080/api/v1/",
@@ -10,7 +11,7 @@ const api = axios.create({
 
 // token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("access");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -34,10 +35,13 @@ api.interceptors.response.use(
 // Centralized Error Handler
 // -------------------------------
 
-export const handleError = (error) => {
-  const message =
-    error?.response?.data?.message || error?.message || "Something went wrong";
+export const handleError = (err) => {
+  const message = err?.response?.data?.error || "Something went wrong";
+  toast.error(message);
 
-  console.error("API Error:", message);
-  throw new Error(message);
+  // throw new Error(message);
+};
+
+export const handleSuccess = (msg) => {
+  toast.success(msg);
 };

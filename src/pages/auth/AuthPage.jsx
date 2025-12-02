@@ -47,8 +47,9 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         const success = await login(form.email, form.password);
-        if (success) navigate("/home");
-        else setMessage("Invalid login credentials");
+        if (!success) {
+          setMessage("Invalid login credentials");
+        }
       } else {
         const success = await register(form);
         if (success) navigate("/verify-gen", { state: { email: form.email } });
