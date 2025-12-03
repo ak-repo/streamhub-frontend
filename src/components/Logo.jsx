@@ -1,6 +1,12 @@
+import { useNavigate } from "react-router-dom";
+
 function Logo() {
+  const navigate = useNavigate();
   return (
-    <div className="flex items-center space-x-3">
+    <div
+      className="flex items-center space-x-3"
+      onClick={() => navigate("/home")}
+    >
       {/* Cloud Icon Container */}
       <div className="relative">
         <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-xl">

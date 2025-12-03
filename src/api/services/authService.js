@@ -6,7 +6,7 @@ import api, { handleError, handleSuccess } from "../api";
 // -------------------------------
 export const loginService = async (email, password) => {
   try {
-    const res = await api.post("/auth/login", {
+    const res = await api.post("/login", {
       email: email,
       password: password,
     });
@@ -19,7 +19,7 @@ export const loginService = async (email, password) => {
 
 export const registerService = async (data) => {
   try {
-    const res = await api.post("/auth/register", data);
+    const res = await api.post("/register", data);
     handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
@@ -31,7 +31,7 @@ export const generateLinkService = async (data) => {
   console.log("Sending data:", data);
   try {
     const res = await api.post(
-      "/auth/verify-gen",
+      "/verify-gen",
       { email: data },
       {
         headers: {
@@ -50,10 +50,8 @@ export const generateLinkService = async (data) => {
 };
 export const verifyLinkService = async (email, token) => {
   try {
-    const res = await api.get(
-      `/auth/verify-link?email=${email}&token=${token}`
-    );
-    handleSuccess(res?.message)
+    const res = await api.get(`/verify-link?email=${email}&token=${token}`);
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);
@@ -61,30 +59,44 @@ export const verifyLinkService = async (email, token) => {
   }
 };
 
+export const forgetPassword = async (data) => {
+  try {
+    const res = await api.post("/forget-password", data);
+    return res?.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+export const verifyForgetPassword = async (data) => {
+  try {
+    const res = await api.post("/verify-password", data);
+    return res?.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
 // -------------------------------
 // Authenticated APIs
 // -------------------------------
-export const changePasswordService = async (data) => {
+export const changePassword = async (password, new_password) => {
   try {
-    const res = await api.post("/auth/password-change", data);
+    const res = await api.post("/auth/password-change", {
+      password,
+      new_password,
+    });
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);
   }
 };
 
-export const sendOtpService = async (data) => {
+export const profileUpdate = async (email, username) => {
   try {
-    const res = await api.post("/auth/send-otp", data);
-    return res?.data;
-  } catch (error) {
-    handleError(error);
-  }
-};
-
-export const verifyOtpService = async (data) => {
-  try {
-    const res = await api.post("/auth/verify-otp", data);
+    const res = await api.post("/auth/profile-update", { email, username });
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);

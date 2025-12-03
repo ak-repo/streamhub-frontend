@@ -1,11 +1,231 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../context/context";
+import { changePassword, profileUpdate } from "../../api/services/authService";
+import toast from "react-hot-toast";
 
+// --- Component 1: Edit Profile Modal ---
+const EditProfileModal = ({ isOpen, onClose }) => {
+  const { user, setUser } = useAuth();
+
+  const [input, setInput] = useState({
+    email: user?.email,
+    username: user?.username,
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = await profileUpdate(input?.email, input?.username);
+      if (data?.user) {
+        setUser(data?.user);
+      }
+      onClose();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+            Edit Profile
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form className="space-y-4" onSubmit={(e) => handleSubmit(e)}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Username
+            </label>
+            <input
+              type="text"
+              onChange={(e) =>
+                setInput((prev) => ({
+                  ...prev,
+                  username: e.target.value,
+                }))
+              }
+              value={input?.username}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              onChange={(e) =>
+                setInput((prev) => ({
+                  ...prev,
+                  email: e.target.value,
+                }))
+              }
+              value={input?.email}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div className="flex space-x-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+            >
+              Cancel
+            </button>
+            <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// --- Component 2: Change Password Modal ---
+const ChangePasswordModal = ({ isOpen, onClose }) => {
+  const [input, setInput] = useState({
+    password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (input.confirm_password != input.new_password) {
+      toast.error("confirm password not matching");
+      return;
+    }
+
+    try {
+      const data = await changePassword(input.password, input.new_password);
+      console.log(data);
+      onClose();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  if (!isOpen) return null;
+
+  return (
+    // CHANGED: Removed 'bg-black bg-opacity-50', changed 'backdrop-blur-sm' to 'backdrop-blur-md'
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+            Change Password
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form className="space-y-4" onSubmit={(e) => handleSubmit(e)}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Current Password
+            </label>
+            <input
+              value={input?.password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, password: e.target.value }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              New Password
+            </label>
+            <input
+              value={input?.new_password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, new_password: e.target.value }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm New Password
+            </label>
+            <input
+              value={input?.confirm_password}
+              onChange={(e) =>
+                setInput((prev) => ({
+                  ...prev,
+                  confirm_password: e.target.value,
+                }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div className="flex space-x-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+            >
+              Cancel
+            </button>
+            <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+              Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// --- Main Profile Component ---
 const Profile = () => {
   const { user } = useAuth();
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
+    <div className="max-w-3xl mx-auto w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 relative">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white">
@@ -122,45 +342,18 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Stats Section (Optional - can be removed for compactness) */}
-          <div className="border-t dark:border-gray-700 pt-4 sm:pt-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4">
-              Account Overview
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="text-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  0
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  Channels
-                </p>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                  0
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  Joined
-                </p>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  Today
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  Active Since
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 pt-4 sm:pt-6">
-            <button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg transition duration-200 flex-1">
+            <button
+              onClick={() => setIsEditOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg transition duration-200 flex-1"
+            >
               Edit Profile
             </button>
-            <button className="border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition duration-200 flex-1">
+            <button
+              onClick={() => setIsPasswordOpen(true)}
+              className="border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 font-medium py-2.5 sm:py-3 px-4 rounded-lg transition duration-200 flex-1"
+            >
               Change Password
             </button>
           </div>
@@ -178,13 +371,24 @@ const Profile = () => {
             </svg>
           </div>
           <h3 className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            No User Data
+            No User input
           </h3>
           <p className="text-gray-500 dark:text-gray-500 text-sm sm:text-base">
             Please sign in to view your profile
           </p>
         </div>
       )}
+
+      {/* Render Separate Bool Components (Modals) */}
+      <EditProfileModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        user={user}
+      />
+      <ChangePasswordModal
+        isOpen={isPasswordOpen}
+        onClose={() => setIsPasswordOpen(false)}
+      />
     </div>
   );
 };
