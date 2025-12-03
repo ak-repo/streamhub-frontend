@@ -134,7 +134,6 @@ function Home() {
             {channels.map((ch) => (
               <div
                 key={ch.channelId}
-                onClick={() => navigate(`/channel/${ch.channelId}`)}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 cursor-pointer group"
               >
                 {/* Channel Icon */}
@@ -186,23 +185,40 @@ function Home() {
                 </div>
 
                 {/* View Button */}
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <button className="w-full py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 flex items-center justify-center group-hover:bg-gray-50 dark:group-hover:bg-gray-700 rounded-lg">
-                    Open Channel
-                    <svg
-                      className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  {ch?.isFrozen ? (
+                    <div
+                      className="w-full py-2 text-sm font-semibold text-red-600 dark:text-red-400 
+                    bg-red-50 dark:bg-red-900/20 rounded-lg text-center"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
+                      Temporarily Banned
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => navigate(`/channel/${ch.channelId}`)}
+                      className="w-full py-2 px-3 rounded-lg flex items-center justify-center 
+                 text-sm font-medium text-gray-700 dark:text-gray-300
+                 bg-gray-50 dark:bg-gray-800
+                 hover:bg-gray-100 dark:hover:bg-gray-700
+                 transition-all duration-200"
+                    >
+                      Open Channel
+                      <svg
+                        className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

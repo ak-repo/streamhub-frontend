@@ -5,7 +5,7 @@ export default function AdminSidebar() {
     "block px-4 py-2 rounded-md text-gray-300 hover:bg-gray-700 transition";
 
   return (
-    <div className="w-64 h-screen bg-gray-900 text-white flex flex-col p-4">
+    <div className="w-64 h-screen bg-sky-950 text-white flex flex-col p-4">
       <h2 className="text-xl font-bold mb-6 text-center">Admin Panel</h2>
 
       <nav className="flex flex-col gap-2">

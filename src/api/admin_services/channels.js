@@ -26,7 +26,8 @@ export const freezeChannel = async (channelId, reason) => {
 
 export const unfreezeChannel = async (channelId) => {
   try {
-    const res = await api.post("/admin/channels/freeze", {
+    console.log(channelId);
+    const res = await api.post("/admin/channels/unfreeze", {
       channelId: channelId,
     });
     handleSuccess(res?.message);
@@ -38,9 +39,7 @@ export const unfreezeChannel = async (channelId) => {
 
 export const deleteChannel = async (channelId) => {
   try {
-    const res = await api.delete("/admin/channels/delete", {
-      data: { channelId },
-    });
+    const res = await api.delete(`/admin/channels/${channelId}`);
 
     handleSuccess(res?.data?.message);
     return res?.data;
