@@ -17,7 +17,6 @@ export const createChannel = async (name, userId) => {
 export const listChannels = async () => {
   try {
     const res = await api.get(`/channels/`);
-    handleSuccess(res?.message)
     return res?.data;
   } catch (err) {
     handleError(err);
@@ -30,7 +29,6 @@ export const joinChannel = async (channelId, userId) => {
       channelId: channelId, // changed from channel_id
       userId: userId, // changed from user_id
     });
-    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);
@@ -59,7 +57,6 @@ export const getMsgHistory = async (channelId) => {
   console.log(channelId, "id");
   try {
     const res = await api.get(`/channels/${channelId}/history`);
-    console.log(res);
     return res?.data;
   } catch (err) {
     handleError(err);
@@ -67,13 +64,11 @@ export const getMsgHistory = async (channelId) => {
 };
 
 export const leaveChannel = async (channelId, userId) => {
-  console.log("leave: ", channelId, " u:", userId);
   try {
     const res = await api.post(`/channels/leave`, {
       channelId: channelId,
       userId: userId,
     });
-    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);

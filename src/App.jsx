@@ -33,6 +33,7 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import ChannelsManagement from "./pages/admin/ChannelsManagement";
 import FilesManagement from "./pages/admin/FilesManagement";
 import AdminProfile from "./pages/admin/AdminProfile";
+import ForgotPassword from "./pages/auth/ForgetPassword";
 
 /* ----------------------------------
    PROTECTED ROUTES
@@ -66,6 +67,8 @@ export default function App() {
                 PUBLIC ROUTES
             -------------------------- */}
             <Route path="/" element={<AuthPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
             <Route path="/verify-gen" element={<EmailVerification />} />
             <Route path="/verify-link" element={<EmailVerified />} />
 

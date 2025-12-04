@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/context";
+import { profileUpdate, changePassword } from "../../api/services/authService";
+import toast from "react-hot-toast";
+
 // import { getUserStats } from "../../api/admin_services/users"; // You'll need to create this API
 
 const AdminProfile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+
   const [editForm, setEditForm] = useState({
     username: "",
     email: "",
@@ -49,10 +54,11 @@ const AdminProfile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      // API call to update profile
-      // await updateUserProfile(user.id, editForm);
+      const data = await profileUpdate(editForm.email, editForm.username);
       setIsEditing(false);
-      // Refresh user data if needed
+      if (data?.user) {
+        setUser(data?.user);
+      }
     } catch (err) {
       console.error("Error updating profile:", err);
     }
@@ -227,53 +233,6 @@ const AdminProfile = () => {
             </div>
           </div>
 
-          {/* Admin Stats */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-              Admin Statistics
-            </h3>
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {userStats?.channelsManaged || 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    Channels Managed
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                    {userStats?.filesMonitored || 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    Files Monitored
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {userStats?.usersManaged || 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    Users Managed
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                  <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {userStats?.actionsTaken || 0}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    Admin Actions
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* User Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Account Information */}
@@ -405,7 +364,10 @@ const AdminProfile = () => {
               Quick Actions
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button className="flex items-center justify-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition duration-200">
+              <button
+                onClick={() => setIsPasswordOpen(true)}
+                className="flex items-center justify-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition duration-200"
+              >
                 <svg
                   className="h-5 w-5 text-gray-600 dark:text-gray-400"
                   fill="none"
@@ -566,8 +528,127 @@ const AdminProfile = () => {
           </button>
         </div>
       )}
+      {
+        <ChangePasswordModal
+          isOpen={isPasswordOpen}
+          onClose={() => setIsPasswordOpen(false)}
+        />
+      }
     </div>
   );
 };
 
 export default AdminProfile;
+
+// --- Component 2: Change Password Modal ---
+const ChangePasswordModal = ({ isOpen, onClose }) => {
+  const [input, setInput] = useState({
+    password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (input.confirm_password != input.new_password) {
+      toast.error("confirm password not matching");
+      return;
+    }
+
+    try {
+      const data = await changePassword(input.password, input.new_password);
+      console.log(data);
+      onClose();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  if (!isOpen) return null;
+
+  return (
+    // CHANGED: Removed 'bg-black bg-opacity-50', changed 'backdrop-blur-sm' to 'backdrop-blur-md'
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+            Change Password
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form className="space-y-4" onSubmit={(e) => handleSubmit(e)}>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Current Password
+            </label>
+            <input
+              value={input?.password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, password: e.target.value }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              New Password
+            </label>
+            <input
+              value={input?.new_password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, new_password: e.target.value }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Confirm New Password
+            </label>
+            <input
+              value={input?.confirm_password}
+              onChange={(e) =>
+                setInput((prev) => ({
+                  ...prev,
+                  confirm_password: e.target.value,
+                }))
+              }
+              type="password"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+          <div className="flex space-x-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+            >
+              Cancel
+            </button>
+            <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+              Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

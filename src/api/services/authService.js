@@ -59,18 +59,23 @@ export const verifyLinkService = async (email, token) => {
   }
 };
 
-export const forgetPassword = async (data) => {
+export const forgetPassword = async (email) => {
   try {
-    const res = await api.post("/forget-password", data);
-    return res?.data;
+    const res = await api.post("/forget-password", { email: email });
+    handleSuccess(res?.message);
+    return res?.success;
   } catch (error) {
     handleError(error);
   }
 };
 
-export const verifyForgetPassword = async (data) => {
+export const verifyPasswordReset = async (email, otp, password) => {
   try {
-    const res = await api.post("/verify-password", data);
+    const res = await api.post("/verify-password", {
+      email: email,
+      token: otp,
+      password: password,
+    });
     return res?.data;
   } catch (error) {
     handleError(error);
@@ -106,6 +111,17 @@ export const profileUpdate = async (email, username) => {
 export const getMeService = async () => {
   try {
     const res = await api.get("/auth/me");
+    return res?.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+export const searchUsers = async (query) => {
+  try {
+    const res = await api.get(`/auth/users?query=${query}`);
+    console.log("all users:", res?.data);
+    handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
     handleError(error);

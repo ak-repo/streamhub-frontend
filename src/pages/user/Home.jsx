@@ -1,257 +1,380 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useAuth } from "../../context/context";
 import {
   createChannel,
   joinChannel,
   listChannels,
 } from "../../api/services/channelService";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { searchUsers } from "../../api/services/authService";
 
-function Home() {
-  const [channels, setChannel] = useState([]);
+// ==========================================
+// NEW COMPONENT: USER PROFILE MODAL
+// ==========================================
+const UserProfileModal = ({ user, isOpen, onClose }) => {
+  if (!isOpen || !user) return null;
+
+  // Helper to format date
+  const joinDate = new Date(user.createdAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+        
+        {/* --- Header Background --- */}
+        <div className="h-24 bg-gradient-to-r from-sky-300 via-sky-500 to-sky-700 relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* --- Profile Content --- */}
+        <div className="px-6 pb-8 relative">
+          {/* Avatar */}
+          <div className="-mt-12 mb-4 flex justify-between items-end">
+            <div className="w-24 h-24 rounded-2xl bg-white dark:bg-gray-800 p-1.5 shadow-lg">
+              <div className="w-full h-full bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-3xl font-bold text-gray-600 dark:text-gray-300">
+                {user.username?.[0]?.toUpperCase()}
+              </div>
+            </div>
+            
+            {/* Role Badge */}
+            <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-2 ${
+              user.role === 'admin' 
+                ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' 
+                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+            }`}>
+              {user.role || "Member"}
+            </div>
+          </div>
+
+          {/* Name & Email */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              {user.username}
+              {user.emailVerified && (
+                <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+              )}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 font-medium">{user.email}</p>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 gap-3 mb-6">
+            {/* User ID Box */}
+            <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 flex items-center justify-between group hover:border-indigo-300 transition-colors">
+              <div>
+                <p className="text-xs text-gray-400 uppercase font-semibold mb-0.5">User ID</p>
+                <p className="text-sm font-mono text-gray-700 dark:text-gray-200 truncate max-w-[200px]">
+                  {user.id}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(user.id);
+                  toast.success("ID Copied!");
+                }}
+                className="p-2 text-gray-400 hover:text-indigo-600 bg-white dark:bg-gray-600 rounded-lg shadow-sm transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+              </button>
+            </div>
+
+            {/* Joined Date */}
+            <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600">
+               <div className="p-2 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-lg mr-3">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+               </div>
+               <div>
+                 <p className="text-xs text-gray-400 uppercase font-semibold">Joined Platform</p>
+                 <p className="text-sm font-medium text-gray-900 dark:text-white">{joinDate}</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 1. CHANNELS VIEW (Unchanged)
+// ==========================================
+const ChannelsView = () => {
   const { user } = useAuth();
-  const [inputID, setInputID] = useState("");
-  const [inputName, setInputName] = useState("");
   const navigate = useNavigate();
+  const [channels, setChannels] = useState([]);
+  const [inputName, setInputName] = useState("");
+  const [inputID, setInputID] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const listAll = async () => {
+    const fetchChannels = async () => {
       try {
         const data = await listChannels(user.id);
-        setChannel(data?.channels || []);
+        setChannels(data?.channels || []);
       } catch (err) {
-        alert("Failed to list channels");
+        console.error("Failed to list channels");
+      } finally {
+        setLoading(false);
       }
     };
-
-    listAll();
+    fetchChannels();
   }, [user?.id]);
 
   const handleCreate = async () => {
-    if (!user?.id) return;
     if (!inputName.trim()) return toast.error("Enter channel name");
-
     try {
       await createChannel(inputName, user.id);
       const data = await listChannels(user.id);
-      setChannel(data?.channels || []);
+      setChannels(data?.channels || []);
       setInputName("");
+      toast.success("Channel created!");
     } catch (err) {
-      console.error("Failed to create channel");
+      toast.error("Failed to create channel");
     }
   };
 
   const handleJoin = async () => {
     if (!inputID.trim()) return toast.error("Enter channel ID");
-    if (!user?.id) return;
-
     try {
       await joinChannel(inputID, user.id);
+      const data = await listChannels(user.id);
+      setChannels(data?.channels || []);
       setInputID("");
+      toast.success("Joined channel!");
     } catch (err) {
-      console.error("Failed to join channel");
+      toast.error("Failed to join channel");
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          My Channels
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Manage your collaboration spaces and join new ones
-        </p>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Quick Actions
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Create Channel */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Create New Channel
-            </label>
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                value={inputName}
-                onChange={(e) => setInputName(e.target.value)}
-                placeholder="Enter channel name"
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
-              />
-              <button
-                onClick={handleCreate}
-                className="px-6 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                Create
-              </button>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-gradient-to-br from-sky-500 to-sky-600 rounded-2xl p-6 text-white shadow-lg transform transition hover:scale-[1.01]">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-white/20 rounded-lg mr-3">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             </div>
+            <h3 className="text-lg font-bold">Create Workspace</h3>
           </div>
-
-          {/* Join Channel */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Join Existing Channel
-            </label>
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                value={inputID}
-                onChange={(e) => setInputID(e.target.value)}
-                placeholder="Enter channel ID"
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-gray-400 focus:border-transparent transition-all duration-200"
-              />
-              <button
-                onClick={handleJoin}
-                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors duration-200"
-              >
-                Join
-              </button>
+          <p className="text-indigo-100 text-sm mb-4">Start a new collaboration channel for your team.</p>
+          <div className="flex gap-2">
+            <input value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="Channel Name" className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-indigo-200 focus:outline-none focus:bg-white/20 transition" />
+            <button onClick={handleCreate} className="px-5 py-2.5 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition shadow-sm">Create</button>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center mb-4">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg mr-3">
+              <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Join Existing</h3>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">Enter an invite ID to join a channel.</p>
+          <div className="flex gap-2">
+            <input value={inputID} onChange={(e) => setInputID(e.target.value)} placeholder="Channel ID..." className="flex-1 px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition" />
+            <button onClick={handleJoin} className="px-5 py-2.5 bg-gray-900 dark:bg-gray-700 text-white font-medium rounded-xl hover:bg-gray-800 dark:hover:bg-gray-600 transition">Join</button>
           </div>
         </div>
       </div>
-
-      {/* Channels Grid */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Your Channels ({channels.length})
-          </h2>
+      <div>
+        <div className="flex items-center justify-between mb-6 px-1">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Your Channels</h2>
+          <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-xs font-medium">{channels.length} Active</span>
         </div>
-
-        {channels.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">{[1, 2, 3].map((i) => (<div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />))}</div>
+        ) : channels.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {channels.map((ch) => (
-              <div
-                key={ch.channelId}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all duration-200 cursor-pointer group"
-              >
-                {/* Channel Icon */}
-                <div className="w-12 h-12 bg-gradient-to-br from-gray-900 to-gray-700 rounded-lg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform duration-200">
-                  <span className="text-white font-semibold text-lg">
-                    {ch.name.charAt(0).toUpperCase()}
-                  </span>
+              <div key={ch.channelId} onClick={() => !ch.isFrozen && navigate(`/channel/${ch.channelId}`)} className="group relative bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                 </div>
-
-                {/* Channel Info */}
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 truncate">
-                  {ch.name}
-                </h3>
-
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    {ch.members.length} members
-                  </div>
-
-                  <div className="flex items-center text-xs text-gray-400 dark:text-gray-500">
-                    <svg
-                      className="w-3 h-3 mr-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                    ID: {ch?.channelId.slice(0, 8)}...
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-tr from-gray-800 to-black dark:from-gray-700 dark:to-gray-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">{ch.name.charAt(0).toUpperCase()}</div>
+                  <div className="ml-4 min-w-0">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate pr-4">{ch.name}</h3>
+                    <p className="text-xs text-gray-500 font-mono truncate">#{ch.channelId.slice(0, 8)}</p>
                   </div>
                 </div>
-
-                {/* View Button */}
-
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  {ch?.isFrozen ? (
-                    <div
-                      className="w-full py-2 text-sm font-semibold text-red-600 dark:text-red-400 
-                    bg-red-50 dark:bg-red-900/20 rounded-lg text-center"
-                    >
-                      Temporarily Banned
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => navigate(`/channel/${ch.channelId}`)}
-                      className="w-full py-2 px-3 rounded-lg flex items-center justify-center 
-                 text-sm font-medium text-gray-700 dark:text-gray-300
-                 bg-gray-50 dark:bg-gray-800
-                 hover:bg-gray-100 dark:hover:bg-gray-700
-                 transition-all duration-200"
-                    >
-                      Open Channel
-                      <svg
-                        className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex -space-x-2">
+                    {[...Array(Math.min(3, ch.members?.length || 0))].map((_, i) => (<div key={i} className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 border-2 border-white dark:border-gray-800" />))}
+                    {(ch.members?.length || 0) > 3 && (<div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-[10px] text-gray-500 font-bold">+{ch.members.length - 3}</div>)}
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{ch.members?.length || 0} Members</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No channels yet
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-              Create your first channel to start collaborating with your team
-              members.
-            </p>
+          <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 text-center">
+            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 text-indigo-500"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg></div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">No channels yet</h3>
+            <p className="text-gray-500 max-w-sm mt-2">Create your first workspace above to get started.</p>
           </div>
         )}
       </div>
     </div>
   );
-}
+};
 
-export default Home;
+// ==========================================
+// 2. USER SEARCH VIEW (UPDATED)
+// ==========================================
+const UserSearchView = () => {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  
+  // State for displaying the profile modal
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setSearching(true);
+    try {
+      const data = await searchUsers(query);
+      setResults(data?.users || []);
+    } catch (error) {
+      toast.error("Search failed");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* --- Search Header --- */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Find Colleagues
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400">
+          Search for people to add to your workspace
+        </p>
+      </div>
+
+      {/* --- Search Input --- */}
+      <form onSubmit={handleSearch} className="relative mb-10 group">
+        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+          <svg className="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        </div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by username or email..."
+          className="block w-full pl-12 pr-32 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-lg"
+        />
+        <button
+          type="submit"
+          disabled={searching}
+          className="absolute right-2 top-2 bottom-2 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+        >
+          {searching ? "..." : "Search"}
+        </button>
+      </form>
+
+      {/* --- Results List --- */}
+      <div className="space-y-4">
+        {results.map((u) => (
+          <div
+            key={u.id}
+            className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+          >
+            <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-full flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold text-lg">
+              {u.username[0].toUpperCase()}
+            </div>
+            <div className="ml-4 flex-1">
+              <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                {u.username}
+              </h4>
+              <p className="text-sm text-gray-500">{u.email}</p>
+            </div>
+            
+            {/* New View Profile Button */}
+            <button
+              onClick={() => setSelectedUser(u)}
+              className="mr-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              View
+            </button>
+
+            {/* Copy ID Button */}
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(u.id);
+                toast.success("Copied!");
+              }}
+              className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+            >
+              Copy ID
+            </button>
+          </div>
+        ))}
+        {results.length === 0 && query && !searching && (
+          <div className="text-center text-gray-400 py-8">No users found</div>
+        )}
+      </div>
+
+      {/* --- Profile Modal Injection --- */}
+      <UserProfileModal 
+        user={selectedUser} 
+        isOpen={!!selectedUser} 
+        onClose={() => setSelectedUser(null)} 
+      />
+    </div>
+  );
+};
+
+// ==========================================
+// 3. MAIN HOME (Unchanged)
+// ==========================================
+export default function Home() {
+  const [activeTab, setActiveTab] = useState("channels");
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex justify-center mb-10">
+        <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl inline-flex shadow-inner">
+          <button
+            onClick={() => setActiveTab("channels")}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              activeTab === "channels"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            }`}
+          >
+            My Channels
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              activeTab === "users"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            }`}
+          >
+            Find Users
+          </button>
+        </div>
+      </div>
+      <div className="min-h-[600px]">
+        {activeTab === "channels" ? <ChannelsView /> : <UserSearchView />}
+      </div>
+    </div>
+  );
+}

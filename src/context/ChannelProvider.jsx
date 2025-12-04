@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ChannelContext, useAuth } from "./context";
 import {
   getChannel,
@@ -8,112 +8,132 @@ import {
 import { listFilesByChannel } from "../api/services/fileService";
 
 function ChannelProvider({ children }) {
+  const { user } = useAuth();
+
+  // --- State ---
+  const [chanID, setChanID] = useState("");
   const [channel, setChannel] = useState(null);
   const [members, setMembers] = useState([]);
-  const [isOwner, setOwner] = useState(false);
-  const [isMember, setMember] = useState(false);
-
   const [messages, setMessages] = useState([]);
   const [files, setFiles] = useState([]);
-  const [chanID, setChanID] = useState("");
-  const { user } = useAuth();
+
+  // --- Triggers ---
   const [refMsg, setRefMsg] = useState(false);
   const [refFile, setRefFile] = useState(false);
+  const [refMem, setRefMem] = useState(false);
 
-  // Fetch channel details + members whenever chanID changes
+
+  const isOwner = useMemo(() => {
+    return channel?.createdBy === user?.id;
+  }, [channel, user?.id]);
+
+  const isMember = useMemo(() => {
+    return Array.isArray(members) && members.some((m) => m.userId === user?.id);
+  }, [members, user?.id]);
+
+  // --- 1. Reset State on Channel Change ---
+  useEffect(() => {
+    if (!chanID) {
+      setChannel(null);
+      setMembers([]);
+      setMessages([]);
+      setFiles([]);
+    }
+  }, [chanID]);
+
+  // --- 2. Fetch Channel Details ---
   useEffect(() => {
     if (!chanID) return;
 
-    const fetchChannelData = async () => {
+    const fetchChannelInfo = async () => {
       try {
-        const data1 = await getChannel(chanID);
-        const channelData = data1?.channel || null;
-        setChannel(channelData);
-
-        const data2 = await getMembers(chanID);
-        const membersData = Array.isArray(data2?.members) ? data2.members : [];
-        setMembers(membersData);
-
-        const data3 = await getMsgHistory(chanID);
-        setMessages(Array.isArray(data3?.messages) ? data3.messages : []);
-
-        const data4 = await listFilesByChannel(user?.id, chanID);
-        setFiles(Array.isArray(data4?.files) ? data4.files : []);
-
-        setOwner(channelData?.createdBy === user?.id);
-
-        setMember(membersData.some((member) => member.userId === user?.id));
+        const { channel } = await getChannel(chanID);
+        setChannel(channel || null);
       } catch (err) {
-        console.error("Failed to fetch channel details:", err);
+        console.error("Fetch Channel Error:", err);
         setChannel(null);
-        setMembers([]);
-        setMessages([]);
-        setFiles([]);
-
-        // ---- Reset ownership/member flags on failure ----
-        setOwner(false);
-        setMember(false);
       }
     };
 
-    // Reset ownership + membership before fetching new channel
-    setOwner(false);
-    setMember(false);
+    fetchChannelInfo();
+  }, [chanID]);
 
-    fetchChannelData();
-  }, [chanID, user?.id]);
-
-  // Re-fetch messages when refMsg toggles
+  // --- 3. Fetch Members (Triggered by chanID OR refMem) ---
   useEffect(() => {
     if (!chanID) return;
 
-    const fetchMSG = async () => {
+    const fetchMembersList = async () => {
       try {
-        const data3 = await getMsgHistory(chanID);
-        setMessages(Array.isArray(data3?.messages) ? data3.messages : []);
+        const data = await getMembers(chanID);
+        setMembers(Array.isArray(data?.members) ? data.members : []);
       } catch (err) {
-        console.error("Failed to fetch chat history:", err);
+        console.error("Fetch Members Error:", err);
+        setMembers([]);
+      }
+    };
+
+    fetchMembersList();
+  }, [chanID, refMem]);
+
+  // --- 4. Fetch Messages (Triggered by chanID OR refMsg) ---
+  useEffect(() => {
+    if (!chanID) return;
+
+    const fetchMessagesList = async () => {
+      try {
+        const data = await getMsgHistory(chanID);
+        setMessages(Array.isArray(data?.messages) ? data.messages : []);
+      } catch (err) {
+        console.error("Fetch Messages Error:", err);
         setMessages([]);
       }
     };
 
-    fetchMSG();
-  }, [refMsg, chanID]);
+    fetchMessagesList();
+  }, [chanID, refMsg]);
 
-  // Re-fetch files when refFile toggles
+  // --- 5. Fetch Files (Triggered by chanID OR refFile) ---
   useEffect(() => {
-    if (!chanID) return;
+    if (!chanID || !user?.id) return;
 
-    const fetchFile = async () => {
+    const fetchFilesList = async () => {
       try {
-        const data = await listFilesByChannel(user?.id, chanID);
+        const data = await listFilesByChannel(user.id, chanID);
         setFiles(Array.isArray(data?.files) ? data.files : []);
       } catch (err) {
-        console.error("Failed to fetch files", err);
+        console.error("Fetch Files Error:", err);
         setFiles([]);
       }
     };
 
-    fetchFile();
-  }, [refFile, chanID]);
+    fetchFilesList();
+  }, [chanID, refFile, user?.id]);
 
   return (
     <ChannelContext.Provider
       value={{
+        // State
         chanID,
-        setChanID,
         channel,
         members,
         messages,
-        setMessages,
         files,
+        isOwner,
+        isMember,
+
+        // Setters
+        setChanID,
+        setMessages,
         setFiles,
+        setMembers,
+
+        // Triggers
         refMsg,
         setRefMsg,
         refFile,
         setRefFile,
-        isOwner,
-        isMember,
+        refMem,
+        setRefMem,
       }}
     >
       {children}

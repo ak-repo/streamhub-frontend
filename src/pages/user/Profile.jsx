@@ -19,10 +19,17 @@ const EditProfileModal = ({ isOpen, onClose }) => {
       if (data?.user) {
         setUser(data?.user);
       }
-      onClose();
+      console.log(data);
+      if (data) {
+        onClose();
+      }
     } catch (e) {
       console.log(e);
     }
+  };
+
+  const handleClose = () => {
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -89,7 +96,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
           </div>
           <div className="flex space-x-3 pt-4">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               Cancel
@@ -383,7 +390,6 @@ const Profile = () => {
       <EditProfileModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        user={user}
       />
       <ChangePasswordModal
         isOpen={isPasswordOpen}

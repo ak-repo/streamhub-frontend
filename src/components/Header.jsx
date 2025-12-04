@@ -41,9 +41,7 @@ function Header() {
         <Logo />
       </div>
 
-      <div className="flex pl-50 items-center text-sky-400">
-        <input type="text" placeholder="search...." className="text-sky-600" />
-      </div>
+     
 
       <div className="flex items-center space-x-3">
         {/* Notification Button */}
