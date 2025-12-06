@@ -11,6 +11,7 @@ export const listUsers = async () => {
 };
 
 export const banUser = async (userId, reason) => {
+  console.log("banninf: ", userId, "reason:",reason);
   try {
     const res = await api.post("/admin/users/ban", {
       userId: userId,

@@ -3,33 +3,59 @@ import { useAuth, useChannel } from "../../../context/context";
 
 const GATEWAY_WS = "ws://localhost:8080/api/v1/ws";
 
+/* -------------------------------------------------------------
+   NORMALIZE MESSAGE FROM SERVER
+------------------------------------------------------------- */
+const normalizeMessage = (rawData) => {
+  const objectEvent = rawData.Event;
+  if (!objectEvent) return null;
+
+  const msgData = objectEvent.Created;
+  if (!msgData) return null;
+
+  if (!msgData.content) return null;
+
+  return {
+    serverId: msgData.message_id,
+    content: msgData.content,
+    timestamp_ms:
+      msgData.timestamp_ms || objectEvent.timestamp_ms || Date.now(),
+    userId: msgData.sender_id || msgData.user_id,
+    channelId: objectEvent.channel_id,
+    username: msgData.username || "Unknown",
+    isOptimistic: false,
+  };
+};
+
+/* -------------------------------------------------------------
+   CHAT AREA
+------------------------------------------------------------- */
 export default function ChatArea() {
   const { user } = useAuth();
-  const { chanID, messages, setMessages, setRefMsg, refMsg, members } = useChannel();
+  const { chanID, messages, setMessages, setRefMsg, members } = useChannel();
 
   const [inputMessage, setInputMessage] = useState("");
-  const [status, setStatus] = useState("disconnected");
+  const [status, setStatus] = useState("connected");
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const safeMessages = Array.isArray(messages) ? messages : [];
 
-  // Trigger message reload once at mount
+  /* -------------------------------------------------------------
+     INITIAL HISTORY LOAD
+  ------------------------------------------------------------- */
   useEffect(() => {
-    setRefMsg((prev) => !prev);
+    setRefMsg((p) => !p);
   }, [setRefMsg]);
 
-  // Connect WebSocket
+  /* -------------------------------------------------------------
+     CONNECT WEBSOCKET
+  ------------------------------------------------------------- */
   useEffect(() => {
     if (!chanID || !user?.id) return;
 
-    if (socketRef.current) {
-      socketRef.current.close();
-    }
-
-    // 2. Debug log to check what User object looks like
-    // console.log("Current User Context:", user);
+    if (socketRef.current) socketRef.current.close();
 
     const ws = new WebSocket(`${GATEWAY_WS}?userId=${user.id}`);
     socketRef.current = ws;
@@ -47,8 +73,46 @@ export default function ChatArea() {
 
     ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data);
-        setMessages((prev) => (Array.isArray(prev) ? [...prev, msg] : [msg]));
+        const rawData = JSON.parse(event.data);
+        const normalized = normalizeMessage(rawData);
+
+        if (!normalized) return;
+
+        // 🔥 DEDUPLICATION + OPTIMISTIC REPLACEMENT
+        setMessages((prev) => {
+          if (!Array.isArray(prev)) return [normalized];
+
+          // Check if optimistic version exists
+          const optimisticIndex = prev.findIndex(
+            (m) =>
+              m.isOptimistic &&
+              m.userId === normalized.userId &&
+              m.content === normalized.content &&
+              Math.abs(m.timestamp_ms - normalized.timestamp_ms) < 500
+          );
+
+          if (optimisticIndex !== -1) {
+            const updated = [...prev];
+            updated[optimisticIndex] = {
+              ...normalized,
+              isOptimistic: false,
+            };
+            return updated;
+          }
+
+          // Prevent duplicates based on (content + sender + near timestamps)
+          const exists = prev.some(
+            (m) =>
+              !m.isOptimistic &&
+              m.userId === normalized.userId &&
+              m.content === normalized.content &&
+              Math.abs(m.timestamp_ms - normalized.timestamp_ms) < 500
+          );
+
+          if (exists) return prev;
+
+          return [...prev, normalized];
+        });
       } catch (err) {
         console.error("WS parse error:", err);
       }
@@ -57,16 +121,19 @@ export default function ChatArea() {
     ws.onerror = () => setStatus("error");
     ws.onclose = () => setStatus("disconnected");
 
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, [chanID, user?.id, setMessages]);
 
-  // Auto-scroll
+  /* -------------------------------------------------------------
+     AUTO-SCROLL
+  ------------------------------------------------------------- */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [safeMessages]);
 
+  /* -------------------------------------------------------------
+     SEND MESSAGE (WITH OPTIMISTIC UPDATE)
+  ------------------------------------------------------------- */
   const sendMessage = (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || status !== "connected") return;
@@ -75,19 +142,35 @@ export default function ChatArea() {
       type: "MESSAGE",
       channelId: chanID,
       userId: user.id,
-      // 3. Ensure we fallback to email or "User" if username is missing
       username: user.username || user.email || "User",
       content: inputMessage,
       timestamp_ms: Date.now(),
+      localId: Date.now(),
     };
-    
-    setRefMsg(!refMsg);
+
     socketRef.current?.send(JSON.stringify(payload));
+
+    // Optimistic append
+    setMessages((prev) => [
+      ...prev,
+      {
+        userId: payload.userId,
+        username: payload.username,
+        content: payload.content,
+        timestamp_ms: payload.timestamp_ms,
+        isOptimistic: true,
+      },
+    ]);
+
     setInputMessage("");
   };
 
+  /* -------------------------------------------------------------
+     RENDER
+  ------------------------------------------------------------- */
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
+      {/* Messages */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
           <div className="p-4 space-y-3">
@@ -97,23 +180,22 @@ export default function ChatArea() {
               </div>
             ) : (
               safeMessages.map((msg, idx) => {
-                const senderId = msg.senderId ?? msg.userId ?? msg.user_id;
-                
-                // 4. Fix Type Mismatch: Convert both to String before comparing
+                const senderId = msg.senderId ?? msg.userId;
+
                 const isMe = String(senderId) === String(user?.id);
 
-                // 5. Robust Name Lookup: 
-                // Try message -> Try member list -> Try ID -> Fallback
+                // Name fix
                 let displayName = msg.username;
-                
-                if (!displayName) {
-                   const senderMember = members.find(m => String(m.userId) === String(senderId));
-                   displayName = senderMember?.username || senderMember?.user?.username || "Unknown";
+                if (!displayName || displayName === "Unknown") {
+                  const m = members.find(
+                    (x) => String(x.userId) === String(senderId)
+                  );
+                  displayName = m?.username || m?.user?.username || "Unknown";
                 }
 
                 return (
                   <div
-                    key={idx}
+                    key={msg.serverId || msg.timestamp_ms || idx}
                     className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                   >
                     <div
@@ -121,7 +203,7 @@ export default function ChatArea() {
                         isMe
                           ? "bg-gray-900 text-white"
                           : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                      }`}
+                      } ${msg.isOptimistic ? "opacity-75" : ""}`}
                     >
                       {!isMe && (
                         <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
@@ -129,7 +211,12 @@ export default function ChatArea() {
                         </div>
                       )}
 
-                      <div className="text-sm break-words">{msg.content}</div>
+                      <div className="text-sm break-words">
+                        {msg.content}
+                        {msg.isOptimistic && (
+                          <span className="ml-1 text-xs text-gray-500">⏳</span>
+                        )}
+                      </div>
 
                       <div
                         className={`text-xs mt-1 ${
@@ -150,18 +237,22 @@ export default function ChatArea() {
                 );
               })
             )}
+
             <div ref={messagesEndRef} />
           </div>
         </div>
       </div>
 
+      {/* Input */}
       <div className="flex-shrink-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
         <form onSubmit={sendMessage} className="flex items-end space-x-2">
           <input
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={status === "connected" ? "Type a message..." : "Connecting..."}
+            placeholder={
+              status === "connected" ? "Type a message..." : "Connecting..."
+            }
             className="flex-1 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 outline-none focus:ring-1 focus:ring-gray-400 text-sm"
           />
           <button

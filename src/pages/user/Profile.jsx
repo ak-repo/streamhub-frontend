@@ -1,9 +1,111 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/context";
-import { changePassword, profileUpdate } from "../../api/services/authService";
+import {
+  changePassword,
+  profileUpdate,
+  UploadProfile,
+} from "../../api/services/authService";
 import toast from "react-hot-toast";
 
-// --- Component 1: Edit Profile Modal ---
+
+// --- PASTE AvatarUploader COMPONENT DEFINITION HERE ---
+// (The full component from the section above)
+const MOCK_API_ENDPOINT = "http://localhost:8080/api/v1/auth/upload-profile";
+
+/**
+ * @param {string} userId - The ID of the user performing the upload.
+ * @param {function(string): void} onSuccess - Callback function called with the new avatar URL upon success.
+ */
+const AvatarUploader = ({ userId, onSuccess }) => {
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const uploadAvatar = async (fileToUpload) => {
+    if (!userId) {
+      toast.error("User ID is missing.");
+      return;
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileToUpload);
+
+    try {
+      const data = await UploadProfile(formData);
+      // console.log("url:,", data);
+
+      const newUrl = data.url;
+
+      toast.success("Avatar uploaded successfully!");
+      onSuccess(newUrl);
+      setFile(null);
+    } catch (error) {
+      console.error("Error during avatar upload:", error);
+      toast.error(error.message || "Upload failed. Check console.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith("image/")) {
+        toast.error("Please select an image file.");
+        setFile(null);
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (file) {
+      uploadAvatar(file);
+    } else {
+      document.getElementById("avatar-file-input").click();
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <input
+        id="avatar-file-input"
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        disabled={loading}
+        style={{ display: "none" }}
+      />
+
+      <button
+        type="button"
+        onClick={file ? () => uploadAvatar(file) : handleUploadClick}
+        disabled={loading}
+        className="mt-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg px-3 py-1.5 transition duration-200 disabled:opacity-50"
+      >
+        {loading
+          ? "Uploading..."
+          : file
+          ? `Upload: ${file.name}`
+          : "Change Avatar"}
+      </button>
+
+      {file && !loading && (
+        <button
+          type="button"
+          onClick={() => setFile(null)}
+          className="mt-1 text-xs text-red-500 hover:text-red-600"
+        >
+          Cancel
+        </button>
+      )}
+    </div>
+  );
+};
+// --- END of AvatarUploader ---
+
+// --- Component 1: Edit Profile Modal (No Change) ---
 const EditProfileModal = ({ isOpen, onClose }) => {
   const { user, setUser } = useAuth();
 
@@ -17,7 +119,9 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     try {
       const data = await profileUpdate(input?.email, input?.username);
       if (data?.user) {
+        // Update user state in context with new details
         setUser(data?.user);
+        toast.success("Profile updated successfully!");
       }
       console.log(data);
       if (data) {
@@ -25,6 +129,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
       }
     } catch (e) {
       console.log(e);
+      toast.error("Failed to update profile.");
     }
   };
 
@@ -33,7 +138,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
-
+  // ... rest of EditProfileModal JSX (omitted for brevity)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
@@ -97,6 +202,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
           <div className="flex space-x-3 pt-4">
             <button
               onClick={handleClose}
+              type="button" // Important: set type to button to prevent form submission
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               Cancel
@@ -111,7 +217,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
   );
 };
 
-// --- Component 2: Change Password Modal ---
+// --- Component 2: Change Password Modal (No Change) ---
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const [input, setInput] = useState({
     password: "",
@@ -121,21 +227,24 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (input.confirm_password != input.new_password) {
-      toast.error("confirm password not matching");
+    if (input.confirm_password !== input.new_password) {
+      toast.error("Confirm password not matching");
       return;
     }
 
     try {
       const data = await changePassword(input.password, input.new_password);
       console.log(data);
+      toast.success("Password changed successfully!");
       onClose();
     } catch (e) {
       console.log(e);
+      toast.error("Failed to change password. Check current password.");
     }
   };
   if (!isOpen) return null;
 
+  // ... rest of ChangePasswordModal JSX (omitted for brevity)
   return (
     // CHANGED: Removed 'bg-black bg-opacity-50', changed 'backdrop-blur-sm' to 'backdrop-blur-md'
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
@@ -146,6 +255,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
           </h3>
           <button
             onClick={onClose}
+            type="button"
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <svg
@@ -210,6 +320,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
           <div className="flex space-x-3 pt-4">
             <button
               onClick={onClose}
+              type="button" // Important: set type to button to prevent form submission
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               Cancel
@@ -226,14 +337,49 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
 // --- Main Profile Component ---
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+  // New state to manage the temporary display of the avatar URL
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user?.avatar_url);
+
+  React.useEffect(() => {
+    setCurrentAvatarUrl(user?.avatar_url);
+  }, [user?.avatar_url]);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
+  // Handler passed to AvatarUploader to update the display URL upon success
+  const handleAvatarUploadSuccess = (newUrl) => {
+    setCurrentAvatarUrl(newUrl);
+    // OPTIONAL: Also update the user context directly if your backend doesn't send a full user update
+    setUser((prevUser) => ({
+      ...prevUser,
+      avatar_url: newUrl,
+    }));
+  };
+
+  // Determine the final URL to display
+  const avatarToDisplay = currentAvatarUrl || user?.avatar_url;
+
+  const defaultAvatar = (
+    <svg
+      className="h-12 w-12 sm:h-16 sm:w-16 text-white"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  );
+
   return (
     <div className="max-w-3xl mx-auto w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 relative">
-      {/* Header */}
+      {/* Header (No Change) */}
       <div className="flex justify-between items-center mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white">
           Your Profile
@@ -263,36 +409,43 @@ const Profile = () => {
 
       {user ? (
         <div className="space-y-6 sm:space-y-8">
-          {/* Profile Card */}
+          {/* Profile Card (MODIFIED) */}
           <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-blue-600 dark:bg-blue-500 p-3 sm:p-4 rounded-full">
-                <svg
-                  className="h-12 w-12 sm:h-16 sm:w-16 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              {/* Avatar Display */}
+              <div className="flex-shrink-0">
+                {avatarToDisplay ? (
+                  <img
+                    src={avatarToDisplay}
+                    alt="User Avatar"
+                    className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover border-4 border-blue-600 dark:border-blue-500"
                   />
-                </svg>
+                ) : (
+                  <div className="bg-blue-600 dark:bg-blue-500 p-3 sm:p-4 rounded-full">
+                    {defaultAvatar}
+                  </div>
+                )}
               </div>
+
+              {/* User Info & Avatar Uploader */}
               <div>
                 <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
                   {user.username}
                 </h2>
-                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
+                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-2">
                   Active Member
                 </p>
+
+                {/* --- Avatar Uploader Integration --- */}
+                <AvatarUploader
+                  userId={user.id}
+                  onSuccess={handleAvatarUploadSuccess}
+                />
               </div>
             </div>
           </div>
 
-          {/* User Details Grid */}
+          {/* User Details Grid (No Change) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Email Card */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5 hover:border-blue-300 dark:hover:border-blue-400 hover:shadow-sm dark:hover:shadow-gray-800 transition duration-200">
@@ -349,7 +502,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons (No Change) */}
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 pt-4 sm:pt-6">
             <button
               onClick={() => setIsEditOpen(true)}
@@ -366,6 +519,7 @@ const Profile = () => {
           </div>
         </div>
       ) : (
+        // No User State (No Change)
         <div className="text-center py-8 sm:py-12">
           <div className="h-16 w-16 sm:h-20 sm:w-20 text-gray-300 dark:text-gray-600 mx-auto mb-4">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,7 +540,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* Render Separate Bool Components (Modals) */}
+      {/* Render Separate Bool Components (Modals) (No Change) */}
       <EditProfileModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}

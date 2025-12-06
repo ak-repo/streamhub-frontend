@@ -1,47 +1,282 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/context";
-import { profileUpdate, changePassword } from "../../api/services/authService";
+import {
+  profileUpdate,
+  changePassword,
+  UploadProfile,
+} from "../../api/services/authService";
 import toast from "react-hot-toast";
 
-// import { getUserStats } from "../../api/admin_services/users"; // You'll need to create this API
+// --- START: AvatarUploader Component ---
+/**
+ * @param {string} userId - The ID of the user performing the upload.
+ * @param {function(string): void} onSuccess - Callback function called with the new avatar URL upon success.
+ */
+const AvatarUploader = ({ userId, onSuccess }) => {
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
+  const uploadAvatar = async (fileToUpload) => {
+    if (!userId) {
+      toast.error("User ID is missing.");
+      return;
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", fileToUpload);
+
+    try {
+      const data = await UploadProfile(formData);
+      const newUrl = data?.url;
+
+      toast.success("Avatar uploaded successfully!");
+      onSuccess(newUrl);
+      setFile(null);
+    } catch (error) {
+      console.error("Error during avatar upload:", error);
+      toast.error(error.message || "Upload failed. Check console.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith("image/")) {
+        toast.error("Please select an image file.");
+        setFile(null);
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const handleUploadClick = () => {
+    if (file) {
+      uploadAvatar(file);
+    } else {
+      document.getElementById("avatar-file-input").click();
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start pt-3">
+      <input
+        id="avatar-file-input"
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        disabled={loading}
+        style={{ display: "none" }}
+      />
+
+      {/* Button Style: sky-500 background for the primary action */}
+      <button
+        type="button"
+        onClick={handleUploadClick}
+        disabled={loading}
+        // Modern, slightly larger button for primary action
+        className="text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600 px-4 py-2 transition duration-200 disabled:opacity-50"
+      >
+        {loading
+          ? "Uploading..."
+          : file
+            ? `Upload ${file.name.substring(0, 10)}...`
+            : "Change Avatar"}
+      </button>
+
+      {file && !loading && (
+        <button
+          type="button"
+          onClick={() => setFile(null)}
+          // Secondary button: Minimal style for "Cancel"
+          className="mt-2 text-xs text-gray-500 hover:text-red-600 font-medium"
+        >
+          Cancel Selection
+        </button>
+      )}
+    </div>
+  );
+};
+// --- END: AvatarUploader Component ---
+
+// --- START: Change Password Modal ---
+const ChangePasswordModal = ({ isOpen, onClose }) => {
+  const [input, setInput] = useState({
+    password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (input.confirm_password !== input.new_password) {
+      toast.error("Confirm password not matching");
+      return;
+    }
+
+    try {
+      const data = await changePassword(input.password, input.new_password);
+      console.log(data);
+      toast.success("Password changed successfully!");
+      onClose();
+    } catch (e) {
+      console.log(e);
+      toast.error("Failed to change password. Check current password.");
+    }
+  };
+  if (!isOpen) return null;
+
+  return (
+    // Modal Background
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-gray-50/50 transition-opacity">
+      {/* Modal Content - Force White Background, Slightly rounded edges for modern feel */}
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6 border border-gray-100 animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-gray-800">Change Password</h3>
+          <button
+            onClick={onClose}
+            type="button"
+            className="text-gray-400 hover:text-gray-600 transition"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Current Password
+            </label>
+            <input
+              value={input?.password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, password: e.target.value }))
+              }
+              type="password"
+              // Input style updated for modern, cleaner look
+              className="w-full px-4 py-2 border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none rounded-md transition"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              New Password
+            </label>
+            <input
+              value={input?.new_password}
+              onChange={(e) =>
+                setInput((prev) => ({ ...prev, new_password: e.target.value }))
+              }
+              type="password"
+              className="w-full px-4 py-2 border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none rounded-md transition"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Confirm New Password
+            </label>
+            <input
+              value={input?.confirm_password}
+              onChange={(e) =>
+                setInput((prev) => ({
+                  ...prev,
+                  confirm_password: e.target.value,
+                }))
+              }
+              type="password"
+              className="w-full px-4 py-2 border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none rounded-md transition"
+            />
+          </div>
+          <div className="flex space-x-3 pt-4">
+            {/* Cancel Button - Secondary, gray text/hover */}
+            <button
+              onClick={onClose}
+              type="button"
+              className="flex-1 px-4 py-2 text-gray-600 hover:bg-gray-100 transition rounded-md font-semibold"
+            >
+              Cancel
+            </button>
+            {/* Primary Button - sky-500 background */}
+            <button
+              className="flex-1 px-4 py-2 bg-sky-500 text-white hover:bg-sky-600 transition rounded-md font-semibold"
+            >
+              Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+// --- END: Change Password Modal ---
+
+
+// --- Main Component: AdminProfile ---
 const AdminProfile = () => {
-  const { user, setUser } = useAuth();
-  const [userStats, setUserStats] = useState(null);
+  const { user, setUser,logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [userStats, setUserStats] = useState(null);
+
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user?.avatar_url);
 
   const [editForm, setEditForm] = useState({
     username: "",
     email: "",
   });
 
+  // Fetch initial data and sync avatar
   useEffect(() => {
     if (user) {
-      fetchUserStats();
+      setLoading(true);
+      setTimeout(() => {
+        setUserStats({
+          recentActivities: [], // Mock data
+          lastLogin: user.lastLogin || new Date().toISOString(),
+        });
+        setLoading(false);
+      }, 500);
+
       setEditForm({
         username: user.username || "",
         email: user.email || "",
       });
+      setCurrentAvatarUrl(user.avatar_url);
     }
   }, [user]);
 
-  const fetchUserStats = async () => {
-    try {
-      setLoading(true);
-      // This API should return stats like channels created, files uploaded, etc.
-      // const stats = await getUserStats(user.id);
-      setUserStats("");
-    } catch (err) {
-      console.error("Error fetching user stats:", err);
-    } finally {
-      setLoading(false);
-    }
+  // Handler to update the displayed avatar and context after a successful upload
+  const handleAvatarUploadSuccess = (newUrl) => {
+    setCurrentAvatarUrl(newUrl);
+    setUser((prevUser) => ({
+      ...prevUser,
+      avatar_url: newUrl,
+    }));
   };
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
+    if (isEditing) {
+      setEditForm({
+        username: user?.username || "",
+        email: user?.email || "",
+      });
+    }
   };
 
   const handleInputChange = (e) => {
@@ -58,9 +293,11 @@ const AdminProfile = () => {
       setIsEditing(false);
       if (data?.user) {
         setUser(data?.user);
+        toast.success("Profile updated successfully!");
       }
     } catch (err) {
       console.error("Error updating profile:", err);
+      toast.error("Failed to update profile.");
     }
   };
 
@@ -80,87 +317,186 @@ const AdminProfile = () => {
   const getRoleBadge = (role) => {
     const roleLower = role?.toLowerCase();
     switch (roleLower) {
-      case "admin":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       case "superadmin":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+        // Use bolder color for Super Admin
+        return "bg-purple-600 text-white";
+      case "admin":
+        // Use bolder color for Admin
+        return "bg-red-600 text-white";
       case "moderator":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+        // Match the primary color for consistency
+        return "bg-sky-500 text-white";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+        return "bg-gray-400 text-white";
     }
   };
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 dark:text-white">
-            Admin Profile
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-            Manage your account and settings
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          {user?.role && (
-            <span
-              className={`px-3 py-1 text-xs font-semibold rounded-full ${getRoleBadge(
-                user.role
-              )}`}
-            >
-              {user.role.toUpperCase()}
-            </span>
-          )}
-          <button
-            onClick={handleEditToggle}
-            className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-full transition duration-200"
-            title={isEditing ? "Cancel Edit" : "Edit Profile"}
-          >
-            {isEditing ? (
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
+  // Default avatar SVG
+  const defaultAvatar = (
+    <svg
+      className="h-16 w-16 text-white"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+      />
+    </svg>
+  );
 
-      {user ? (
-        <div className="space-y-6 sm:space-y-8">
-          {/* Profile Card */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-3 sm:space-x-4">
-                <div className="relative">
-                  <div className="bg-blue-600 dark:bg-blue-500 p-3 sm:p-4 rounded-full">
+  // The main component structure
+  return (
+    // Outer Container: Full Width/Height, Full White Background
+    <div className="w-full h-full bg-white">
+      {/* Inner Content Wrapper: Apply generous padding */}
+      <div className="w-full h-full p-6 lg:p-10">
+        {/* Main Content Area - Force White Background */}
+        <div className="w-full bg-white">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800">
+                Admin Profile Dashboard
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">
+                Manage your profile, security, and activity logs
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              {/* Edit/Cancel Button - Subtle but professional */}
+              <button
+                onClick={handleEditToggle}
+                className={`p-2 font-semibold text-sm transition duration-200 ${isEditing
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-sky-600 hover:bg-sky-50"
+                  } border border-gray-200 hover:border-sky-500 rounded-md`}
+                title={isEditing ? "Cancel Edit" : "Edit Profile"}
+              >
+                {isEditing ? "Cancel" : "Edit Profile"}
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">
+              Loading profile data...
+            </div>
+          ) : user ? (
+            <div className="space-y-8">
+              {/* Profile Summary Card - White Background, Rounded edges, Subtle shadow */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-6 sm:space-y-0 sm:space-x-6">
+                  {/* Avatar Section */}
+                  <div className="flex-shrink-0">
+                    <div className="relative">
+                      {/* Avatar Image - Larger and modern border */}
+                      {currentAvatarUrl ? (
+                        <img
+                          src={currentAvatarUrl}
+                          alt="Admin Avatar"
+                          className="h-24 w-24 rounded-full object-cover border-4 border-sky-500 ring-2 ring-sky-100"
+                        />
+                      ) : (
+                        <div className="bg-sky-500 p-2 rounded-full h-24 w-24 flex items-center justify-center border-4 border-sky-500">
+                          {defaultAvatar}
+                        </div>
+                      )}
+
+                      {/* Role Badge - Bottom right, solid color, clean corners */}
+                      {user?.role && (
+                        <div
+                          className={`absolute -bottom-1 -right-1 px-3 py-1 text-xs font-bold uppercase rounded-sm ${getRoleBadge(
+                            user.role
+                          )}`}
+                        >
+                          {user.role}
+                        </div>
+                      )}
+                    </div>
+                    {/* Uploader Button (below the image) */}
+                    <AvatarUploader
+                      userId={user.id}
+                      onSuccess={handleAvatarUploadSuccess}
+                    />
+                  </div>
+
+                  {/* Profile Details / Edit Form */}
+                  <div className="min-w-0 flex-1">
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <h3 className="text-lg font-bold text-sky-500">Editing Profile</h3>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            USERNAME
+                          </label>
+                          <input
+                            type="text"
+                            name="username"
+                            value={editForm.username}
+                            onChange={handleInputChange}
+                            // Input style updated for modern, cleaner look
+                            className="w-full px-4 py-2 border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none rounded-md transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            EMAIL
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={editForm.email}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-2 border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none rounded-md transition"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-1 truncate">
+                          {user.username}
+                        </h2>
+                        <p className="text-lg text-gray-600 mb-3 truncate">
+                          {user.email}
+                        </p>
+                        <p className="text-sm text-gray-500 pt-1 border-t border-gray-100">
+                          Account created on:{" "}
+                          <span className="font-medium text-gray-700">
+                            {user.createdAt
+                              ? formatDate(user.createdAt)
+                              : "Unknown"}
+                          </span>
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Save Button for Edit Mode */}
+                  {isEditing && (
+                    <div className="flex-shrink-0 pt-4 sm:pt-0">
+                      {/* Save Profile Button - sky-500 background */}
+                      <button
+                        onClick={handleSaveProfile}
+                        className="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 px-6 transition duration-200 w-full rounded-md shadow-md"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Account Details & Actions Grid - Clean and spaced-out */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1. Account Information Card */}
+                <div className="md:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-5 flex items-center space-x-2">
                     <svg
-                      className="h-12 w-12 sm:h-16 sm:w-16 text-white"
+                      className="h-6 w-6 text-sky-500"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -169,365 +505,193 @@ const AdminProfile = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                  </div>
-                  {user?.isActive && (
-                    <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                  )}
-                </div>
-                <div>
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Username
-                        </label>
-                        <input
-                          type="text"
-                          name="username"
-                          value={editForm.username}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={editForm.email}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 dark:text-white">
-                        {user.username}
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                        {user.email}
+                    <span>Account Overview</span>
+                  </h3>
+                  <div className="space-y-4">
+                    {/* User ID */}
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-500">
+                        User ID
                       </p>
-                      {user.createdAt && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Member since {formatDate(user.createdAt)}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-              {isEditing && (
-                <button
-                  onClick={handleSaveProfile}
-                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition duration-200"
-                >
-                  Save Changes
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* User Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {/* Account Information */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5">
-              <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-                <div className="bg-gray-100 dark:bg-gray-700 p-1.5 sm:p-2 rounded-lg">
-                  <svg
-                    className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600 dark:text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
-                  Account Information
-                </h3>
-              </div>
-              <div className="space-y-3 pl-8 sm:pl-11">
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    User ID
-                  </p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200 font-mono truncate">
-                    {user.id}
-                  </p>
-                </div>
-                {user.role && (
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Role
-                    </p>
-                    <p className="text-sm text-gray-800 dark:text-gray-200">
-                      {user.role}
-                    </p>
-                  </div>
-                )}
-                {user.status && (
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Status
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className={`h-2 w-2 rounded-full ${
-                          user.status === "active"
-                            ? "bg-green-500"
-                            : "bg-gray-400"
-                        }`}
-                      ></div>
-                      <p className="text-sm text-gray-800 dark:text-gray-200 capitalize">
-                        {user.status}
+                      <p className="text-sm text-gray-800 font-mono tracking-wider">
+                        {user.id}
                       </p>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Session Information */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5">
-              <div className="flex items-center space-x-2 sm:space-x-3 mb-4">
-                <div className="bg-blue-100 dark:bg-blue-900 p-1.5 sm:p-2 rounded-lg">
-                  <svg
-                    className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 text-sm sm:text-base">
-                  Session Information
-                </h3>
-              </div>
-              <div className="space-y-3 pl-8 sm:pl-11">
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Last Login
-                  </p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200">
-                    {user.lastLogin ? formatDate(user.lastLogin) : "Never"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Current Session
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <p className="text-sm text-gray-800 dark:text-gray-200">
-                      Active Now
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Account Created
-                  </p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200">
-                    {user.createdAt ? formatDate(user.createdAt) : "Unknown"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="border-t dark:border-gray-700 pt-4 sm:pt-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button
-                onClick={() => setIsPasswordOpen(true)}
-                className="flex items-center justify-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition duration-200"
-              >
-                <svg
-                  className="h-5 w-5 text-gray-600 dark:text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Change Password
-                </span>
-              </button>
-              <button className="flex items-center justify-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-gray-700 rounded-lg transition duration-200">
-                <svg
-                  className="h-5 w-5 text-gray-600 dark:text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Security Settings
-                </span>
-              </button>
-              <button className="flex items-center justify-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-gray-700 rounded-lg transition duration-200">
-                <svg
-                  className="h-5 w-5 text-gray-600 dark:text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Preferences
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Recent Activity (Optional) */}
-          <div className="border-t dark:border-gray-700 pt-4 sm:pt-6">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">
-              Recent Admin Activity
-            </h3>
-            <div className="space-y-3">
-              {userStats?.recentActivities?.length > 0 ? (
-                userStats.recentActivities
-                  .slice(0, 3)
-                  .map((activity, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`p-1.5 rounded ${
-                            activity.type === "delete"
-                              ? "bg-red-100 dark:bg-red-900"
-                              : "bg-blue-100 dark:bg-blue-900"
-                          }`}
-                        >
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            {activity.type === "delete" ? (
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            ) : (
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            )}
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-800 dark:text-gray-200">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {activity.time}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          activity.type === "delete"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                        }`}
+                    {/* Role */}
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-500">
+                        Role
+                      </p>
+                      <p
+                        className={`text-sm font-bold uppercase px-3 py-1 rounded-sm ${getRoleBadge(
+                          user.role
+                        )}`}
                       >
-                        {activity.type}
-                      </span>
+                        {user.role}
+                      </p>
                     </div>
-                  ))
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No recent activity
-                  </p>
+                    {/* Status */}
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-500">
+                        Status
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className={`h-2.5 w-2.5 rounded-full ${user.status === "active" ? "bg-green-500" : "bg-gray-400"
+                            }`}
+                        ></div>
+                        <p className="text-sm text-gray-800 font-medium capitalize">
+                          {user.status || "Active"}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Last Login */}
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-semibold text-gray-500">
+                        Last Login
+                      </p>
+                      <p className="text-sm text-gray-800 font-medium">
+                        {userStats?.lastLogin
+                          ? formatDate(userStats.lastLogin)
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                {/* 2. Quick Actions Card */}
+                <div className="md:col-span-1 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-5 flex items-center space-x-2">
+                    <svg
+                      className="h-6 w-6 text-sky-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                    <span>Quick Actions</span>
+                  </h3>
+                  <div className="space-y-3">
+                    {/* Action Button 1: Change Password - Clear hover states */}
+                    <button
+                      onClick={() => setIsPasswordOpen(true)}
+                      className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        Change Password
+                      </span>
+                      <svg
+                        className="h-5 w-5 text-sky-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                        />
+                      </svg>
+                    </button>
+                    {/* Action Button 2: View Activity Log */}
+                    <button
+                      className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        View Activity Log
+                      </span>
+                      <svg
+                        className="h-5 w-5 text-sky-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                        />
+                      </svg>
+                    </button>
+                    {/* Action Button 3: Log Out */}
+                    <button
+
+                    onClick={logout}
+                      className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md"
+                    >
+                      <span className="text-sm font-medium text-gray-700">
+                        Log Out
+                      </span>
+                      <svg
+                        className="h-5 w-5 text-sky-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-5a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            // Session Expired State
+            <div className="text-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="h-20 w-20 text-sky-500 mx-auto mb-4">
+                {/* Icon for sign-in state */}
+                <svg
+                  className="w-full h-full"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Session Required
+              </h3>
+              <p className="text-gray-500 text-base mb-4">
+                Please sign in to access the admin features and data.
+              </p>
+              {/* Sign In Button - sky-500 background */}
+              <button
+                className="mt-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold px-6 py-2 transition duration-200 rounded-md"
+              >
+                Sign In
+              </button>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="text-center py-8 sm:py-12">
-          <div className="h-16 w-16 sm:h-20 sm:w-20 text-gray-300 dark:text-gray-600 mx-auto mb-4">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            Session Expired
-          </h3>
-          <p className="text-gray-500 dark:text-gray-500 text-sm sm:text-base">
-            Please sign in to access admin features
-          </p>
-          <button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
-            Sign In
-          </button>
-        </div>
-      )}
+      </div>
       {
         <ChangePasswordModal
           isOpen={isPasswordOpen}
@@ -539,116 +703,3 @@ const AdminProfile = () => {
 };
 
 export default AdminProfile;
-
-// --- Component 2: Change Password Modal ---
-const ChangePasswordModal = ({ isOpen, onClose }) => {
-  const [input, setInput] = useState({
-    password: "",
-    new_password: "",
-    confirm_password: "",
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (input.confirm_password != input.new_password) {
-      toast.error("confirm password not matching");
-      return;
-    }
-
-    try {
-      const data = await changePassword(input.password, input.new_password);
-      console.log(data);
-      onClose();
-    } catch (e) {
-      console.log(e);
-    }
-  };
-  if (!isOpen) return null;
-
-  return (
-    // CHANGED: Removed 'bg-black bg-opacity-50', changed 'backdrop-blur-sm' to 'backdrop-blur-md'
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
-            Change Password
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <form className="space-y-4" onSubmit={(e) => handleSubmit(e)}>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Current Password
-            </label>
-            <input
-              value={input?.password}
-              onChange={(e) =>
-                setInput((prev) => ({ ...prev, password: e.target.value }))
-              }
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              New Password
-            </label>
-            <input
-              value={input?.new_password}
-              onChange={(e) =>
-                setInput((prev) => ({ ...prev, new_password: e.target.value }))
-              }
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Confirm New Password
-            </label>
-            <input
-              value={input?.confirm_password}
-              onChange={(e) =>
-                setInput((prev) => ({
-                  ...prev,
-                  confirm_password: e.target.value,
-                }))
-              }
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <div className="flex space-x-3 pt-4">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
-              Cancel
-            </button>
-            <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-              Update Password
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};

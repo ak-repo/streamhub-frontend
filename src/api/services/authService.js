@@ -11,6 +11,7 @@ export const loginService = async (email, password) => {
       password: password,
     });
     handleSuccess(res?.message);
+    console.log("login:", res?.data);
     return res?.data;
   } catch (error) {
     handleError(error);
@@ -125,5 +126,20 @@ export const searchUsers = async (query) => {
     return res?.data;
   } catch (error) {
     handleError(error);
+  }
+};
+
+export const UploadProfile = async (formData) => {
+  try {
+    const res = await api.post(`/auth/upload-profile`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    handleSuccess(res?.message);
+    return res.data;
+  } catch (err) {
+    handleError(err);
   }
 };

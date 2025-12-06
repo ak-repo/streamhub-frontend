@@ -1,10 +1,40 @@
 import React, { useEffect, useState } from "react";
+// Import all necessary functions from the consolidated API file
 import {
   listUsers,
   updateUserRole,
   banUser,
+  unbanUser, // Added unbanUser
   deleteUser,
 } from "../../api/admin_services/users";
+
+// Utility function to format date string
+const formatDate = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (e) {
+    return dateString;
+  }
+};
+
+// Utility function to get role badge color
+const getRoleBadgeColor = (role) => {
+  switch (role) {
+    case "super-admin":
+      return "bg-red-100 text-red-800";
+    case "admin":
+      return "bg-purple-100 text-purple-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
 
 function UsersManagement() {
   const [users, setUsers] = useState([]);
@@ -14,20 +44,26 @@ function UsersManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  // Added banReason state for more complete ban/unban API calls
   const [editForm, setEditForm] = useState({
     role: "",
     isBanned: false,
+    banReason: "", // Added state for ban reason
   });
 
-  // Fetch users on component mount
+  /**
+   * Fetches users from the API.
+   */
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
+        // listUsers now returns an object with a 'users' array, as per common API practices
         const data = await listUsers();
         setUsers(data?.users || []);
       } catch (err) {
         console.error("Error fetching users:", err);
+        // Optionally show a toast notification here
       } finally {
         setLoading(false);
       }
@@ -54,31 +90,44 @@ function UsersManagement() {
     setEditForm({
       role: user.role || "user",
       isBanned: user.isBanned || false,
+      banReason: user.banReason || "", // Initialize banReason
     });
     setShowEditModal(true);
   };
 
-  // Handle saving edited user
+  /**
+   * Handles saving edited user data and making API calls for role/ban changes.
+   */
   const handleSaveEdit = async () => {
+    if (!editingUser) return;
+
     try {
-      // Update role if changed
+      setLoading(true);
+      const updates = {}; // Collect updates to apply to the local state
+
+      // 1. Handle Role Update
       if (editingUser.role !== editForm.role) {
         await updateUserRole(editingUser.id, editForm.role);
+        updates.role = editForm.role;
       }
 
-      // Update ban status if changed
+      // 2. Handle Ban Status Update
       if (editingUser.isBanned !== editForm.isBanned) {
         if (editForm.isBanned) {
-          await banUser(editingUser.id, true);
+          // Ban the user
+          await banUser(editingUser.id, editForm.banReason);
         } else {
-          await banUser(editingUser.id, false);
+          // Unban the user
+          await unbanUser(editingUser.id);
         }
+        updates.isBanned = editForm.isBanned;
+        updates.banReason = editForm.isBanned ? editForm.banReason : "";
       }
 
-      // Update local state
+      // Update local state (Optimistic Update)
       setUsers(
         users.map((user) =>
-          user.id === editingUser.id ? { ...user, ...editForm } : user
+          user.id === editingUser.id ? { ...user, ...updates } : user
         )
       );
 
@@ -86,46 +135,27 @@ function UsersManagement() {
       setEditingUser(null);
     } catch (err) {
       console.error("Error updating user:", err);
+      // NOTE: For a real-world app, you'd likely want to re-fetch users or roll back the local state on failure
+    } finally {
+      setLoading(false);
     }
   };
 
   // Handle deleting user
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+  const handleDeleteUser = async (userId, username) => {
+    if (
+      window.confirm(`Are you sure you want to delete the user "${username}"?`)
+    ) {
       try {
+        setLoading(true);
         await deleteUser(userId);
+        // Update local state immediately after successful deletion
         setUsers(users.filter((user) => user.id !== userId));
       } catch (err) {
         console.error("Error deleting user:", err);
+      } finally {
+        setLoading(false);
       }
-    }
-  };
-
-  // Format date string
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (e) {
-      return dateString;
-    }
-  };
-
-  // Get role badge color
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case "super-admin":
-        return "bg-red-100 text-red-800";
-      case "admin":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -331,7 +361,7 @@ function UsersManagement() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleDeleteUser(user.id, user.username)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete User"
                             disabled={user.role === "super-admin"}
@@ -396,27 +426,18 @@ function UsersManagement() {
 
 export default UsersManagement;
 
+// --- Modal Components ---
+
+// NOTE: In a production app, these would be in separate files (e.g., DetailedUser.jsx, EditUser.jsx)
+
+/**
+ * Detailed User View Modal
+ */
 const DetailedUser = ({
   setShowDetailsModal,
   selectedUser,
   handleEditUser,
 }) => {
-  // Format date string
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (e) {
-      return dateString;
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -541,13 +562,9 @@ const DetailedUser = ({
                       {selectedUser.isBanned ? "Banned" : "Active"}
                     </span>
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedUser.role === "super-admin"
-                          ? "bg-red-100 text-red-800"
-                          : selectedUser.role === "admin"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(
+                        selectedUser.role
+                      )}`}
                     >
                       {selectedUser.role || "user"}
                     </span>
@@ -588,6 +605,16 @@ const DetailedUser = ({
                 </p>
               </div>
             )}
+            {selectedUser.isBanned && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-1">
+                  Ban Reason
+                </h4>
+                <p className="text-red-800 font-semibold">
+                  {selectedUser.banReason || "Not specified."}
+                </p>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
@@ -614,6 +641,9 @@ const DetailedUser = ({
   );
 };
 
+/**
+ * Edit User Modal
+ */
 const EditUser = ({
   setShowEditModal,
   setEditForm,
@@ -661,6 +691,7 @@ const EditUser = ({
                   setEditForm({ ...editForm, role: e.target.value })
                 }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={editingUser.role === "super-admin"} // Prevent editing super-admin role
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -670,7 +701,7 @@ const EditUser = ({
 
             {/* Ban Status */}
             <div>
-              <label className="flex items-center space-x-3">
+              <label className="flex items-center space-x-3 mb-2">
                 <input
                   type="checkbox"
                   checked={editForm.isBanned}
@@ -696,16 +727,35 @@ const EditUser = ({
                   />
                 </svg>
               </label>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 mt-1 mb-4">
                 Banned users cannot log in or access their account.
               </p>
+
+              {/* Ban Reason Input (Visible only if user is being banned) */}
+              {editForm.isBanned && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ban Reason (Required)
+                  </label>
+                  <textarea
+                    value={editForm.banReason}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, banReason: e.target.value })
+                    }
+                    rows="3"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Enter the reason for banning this user..."
+                  />
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
               <button
                 onClick={handleSaveEdit}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50"
+                disabled={editForm.isBanned && !editForm.banReason} // Disable save if banning without a reason
               >
                 Save Changes
               </button>
