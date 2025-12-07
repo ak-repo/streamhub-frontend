@@ -1,5 +1,11 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { listFiles, deleteFile } from "../../api/admin_services/files";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { listFiles, deleteFile } from "../../api/services/fileService";
 
 function FilesManagement() {
   const [files, setFiles] = useState([]);
@@ -63,14 +69,15 @@ function FilesManagement() {
   };
 
   // Filter files based on search term
-  const filteredFiles = useMemo(() => 
-    files.filter(
-      (file) =>
-        file.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.channelName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        file.mimeType?.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
+  const filteredFiles = useMemo(
+    () =>
+      files.filter(
+        (file) =>
+          file.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          file.channelName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          file.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          file.mimeType?.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
     [files, searchTerm]
   );
 
@@ -131,41 +138,101 @@ function FilesManagement() {
   // Get file icon based on mime type
   const getFileIcon = useCallback((mimeType) => {
     const iconClass = "h-6 w-6";
-    
+
     if (mimeType?.startsWith("image/")) {
       return (
-        <svg className={`${iconClass} text-green-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <svg
+          className={`${iconClass} text-green-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
         </svg>
       );
     } else if (mimeType?.startsWith("video/")) {
       return (
-        <svg className={`${iconClass} text-purple-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        <svg
+          className={`${iconClass} text-purple-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+          />
         </svg>
       );
     } else if (mimeType?.startsWith("audio/")) {
       return (
-        <svg className={`${iconClass} text-yellow-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        <svg
+          className={`${iconClass} text-yellow-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+          />
         </svg>
       );
     } else if (mimeType === "application/pdf") {
       return (
-        <svg className={`${iconClass} text-red-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        <svg
+          className={`${iconClass} text-red-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          />
         </svg>
       );
     } else if (mimeType?.includes("debian") || mimeType?.includes("package")) {
       return (
-        <svg className={`${iconClass} text-blue-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        <svg
+          className={`${iconClass} text-blue-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+          />
         </svg>
       );
     } else {
       return (
-        <svg className={`${iconClass} text-gray-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <svg
+          className={`${iconClass} text-gray-600`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
         </svg>
       );
     }
@@ -177,7 +244,8 @@ function FilesManagement() {
     if (mimeType?.startsWith("video/")) return "bg-purple-100 text-purple-800";
     if (mimeType?.startsWith("audio/")) return "bg-yellow-100 text-yellow-800";
     if (mimeType === "application/pdf") return "bg-red-100 text-red-800";
-    if (mimeType?.includes("debian") || mimeType?.includes("package")) return "bg-blue-100 text-blue-800";
+    if (mimeType?.includes("debian") || mimeType?.includes("package"))
+      return "bg-blue-100 text-blue-800";
     return "bg-gray-100 text-gray-800";
   }, []);
 
@@ -187,8 +255,9 @@ function FilesManagement() {
     if (mimeType?.startsWith("video/")) return "Video";
     if (mimeType?.startsWith("audio/")) return "Audio";
     if (mimeType === "application/pdf") return "PDF";
-    if (mimeType?.includes("debian") || mimeType?.includes("package")) return "Package";
-    if (mimeType) return mimeType.split('/')[1]?.toUpperCase() || "File";
+    if (mimeType?.includes("debian") || mimeType?.includes("package"))
+      return "Package";
+    if (mimeType) return mimeType.split("/")[1]?.toUpperCase() || "File";
     return "Unknown";
   }, []);
 
@@ -212,8 +281,8 @@ function FilesManagement() {
   }, []);
 
   // Calculate total storage used
-  const totalStorageUsed = useMemo(() => 
-    files.reduce((total, file) => total + parseInt(file.size || 0), 0),
+  const totalStorageUsed = useMemo(
+    () => files.reduce((total, file) => total + parseInt(file.size || 0), 0),
     [files]
   );
 
@@ -245,7 +314,10 @@ function FilesManagement() {
               </p>
               <span className="text-gray-300">•</span>
               <p className="text-gray-600">
-                <span className="font-semibold">{formatFileSize(totalStorageUsed)}</span> Storage Used
+                <span className="font-semibold">
+                  {formatFileSize(totalStorageUsed)}
+                </span>{" "}
+                Storage Used
               </p>
             </div>
           </div>
@@ -283,11 +355,23 @@ function FilesManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">Total Files</p>
-                <p className="text-2xl font-bold text-blue-900">{files.length}</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {files.length}
+                </p>
               </div>
               <div className="p-2 bg-blue-100 rounded-full">
-                <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="h-6 w-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </div>
             </div>
@@ -295,12 +379,26 @@ function FilesManagement() {
           <div className="bg-green-50 p-4 rounded-lg border border-green-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-800">Storage Used</p>
-                <p className="text-2xl font-bold text-green-900">{formatFileSize(totalStorageUsed)}</p>
+                <p className="text-sm font-medium text-green-800">
+                  Storage Used
+                </p>
+                <p className="text-2xl font-bold text-green-900">
+                  {formatFileSize(totalStorageUsed)}
+                </p>
               </div>
               <div className="p-2 bg-green-100 rounded-full">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
                 </svg>
               </div>
             </div>
@@ -308,16 +406,30 @@ function FilesManagement() {
           <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-800">Largest File</p>
+                <p className="text-sm font-medium text-purple-800">
+                  Largest File
+                </p>
                 <p className="text-lg font-bold text-purple-900">
-                  {files.length > 0 
-                    ? formatFileSize(Math.max(...files.map(f => parseInt(f.size || 0))))
+                  {files.length > 0
+                    ? formatFileSize(
+                        Math.max(...files.map((f) => parseInt(f.size || 0)))
+                      )
                     : "0 Bytes"}
                 </p>
               </div>
               <div className="p-2 bg-purple-100 rounded-full">
-                <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <svg
+                  className="h-6 w-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
                 </svg>
               </div>
             </div>
@@ -570,16 +682,46 @@ const FileDetailsModal = React.forwardRef(
                 <div className="flex items-center space-x-4">
                   <div className="bg-white p-4 rounded-full shadow">
                     {selectedFile.mimeType?.startsWith("image/") ? (
-                      <svg className="h-16 w-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="h-16 w-16 text-green-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
                     ) : selectedFile.mimeType?.startsWith("video/") ? (
-                      <svg className="h-16 w-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <svg
+                        className="h-16 w-16 text-purple-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                     ) : (
-                      <svg className="h-16 w-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <svg
+                        className="h-16 w-16 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                     )}
                   </div>
@@ -645,8 +787,18 @@ const FileDetailsModal = React.forwardRef(
                         <p className="text-xs text-gray-500">Channel</p>
                         <div className="flex items-center space-x-2 bg-gray-50 p-2 rounded">
                           <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                            <svg className="h-3 w-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            <svg
+                              className="h-3 w-3 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                              />
                             </svg>
                           </div>
                           <div>
@@ -663,8 +815,18 @@ const FileDetailsModal = React.forwardRef(
                         <p className="text-xs text-gray-500">Owner</p>
                         <div className="flex items-center space-x-2 bg-gray-50 p-2 rounded">
                           <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                            <svg className="h-3 w-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            <svg
+                              className="h-3 w-3 text-green-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
                             </svg>
                           </div>
                           <div>
@@ -900,7 +1062,10 @@ const DeleteFileModal = React.forwardRef(
                     <ul className="text-sm space-y-1 list-disc list-inside">
                       <li>Delete the file from storage</li>
                       <li>Remove all file references</li>
-                      <li>Free up {formatFileSize(parseInt(deletingFile.size || 0))} space</li>
+                      <li>
+                        Free up{" "}
+                        {formatFileSize(parseInt(deletingFile.size || 0))} space
+                      </li>
                       <li>Break any links to this file</li>
                     </ul>
                   </div>

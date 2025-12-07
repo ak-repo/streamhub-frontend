@@ -1,8 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  joinChannel,
-  leaveChannel,
-} from "../../../api/services/channelService";
+import { leaveChannel, sendInvite } from "../../../api/services/channelService";
 import { useChannel, useAuth } from "../../../context/context";
 
 export default function Members() {
@@ -30,13 +27,12 @@ export default function Members() {
 
     setIsSubmitting(true);
     try {
-      await joinChannel(chanID, newUserStats);
-      setRefMem((prev) => !prev); // Refresh list
+      await sendInvite(chanID, newUserStats);
+      // setRefMem((prev) => !prev); // Refresh list
       setNewUserStats("");
       setShowAddInput(false);
     } catch (e) {
-      console.error("Add member failed:", e);
-      alert("Failed to add member. Check ID and try again.");
+      console.error("failed to invite user:", e);
     } finally {
       setIsSubmitting(false);
     }

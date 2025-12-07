@@ -86,3 +86,105 @@ export const deleteChannel = async (channelId, userId) => {
     handleError(err);
   }
 };
+
+export const searchChannels = async () => {
+  console.log("clicked channel");
+};
+
+export const sendJoin = async (userId, channelId) => {
+  try {
+    const res = await api.post("/channels/sendjoin", { channelId, userId });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+export const sendInvite = async (channelId, userId) => {
+  try {
+    const res = await api.post("/channels/sendinvite", { channelId, userId });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const userInvites = async () => {
+  try {
+    const res = await api.get("/channels/invites");
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const channelJoins = async (channelId) => {
+  try {
+    const res = await api.get(`/channels/joins/${channelId}`);
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const updateRequstStatus = async (reqId, status) => {
+  try {
+    const res = await api.post("/channels/updatereq", { reqId, status });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+// admin-specified services
+
+// export const listChannels = async () => {
+//   try {
+//     const res = await api.get(`/admin/channels`);
+//     handleSuccess(res?.message);
+//     return res?.data;
+//   } catch (err) {
+//     handleError(err);
+//   }
+// };
+
+export const freezeChannel = async (channelId, reason) => {
+  try {
+    const res = await api.post("/admin/channels/freeze", {
+      channelId: channelId,
+      reason: reason,
+    });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const unfreezeChannel = async (channelId) => {
+  try {
+    console.log(channelId);
+    const res = await api.post("/admin/channels/unfreeze", {
+      channelId: channelId,
+    });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+// export const deleteChannel = async (channelId) => {
+//   try {
+//     const res = await api.delete(`/admin/channels/${channelId}`);
+
+//     handleSuccess(res?.data?.message);
+//     return res?.data;
+//   } catch (err) {
+//     handleError(err);
+//   }
+// };

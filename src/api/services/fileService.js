@@ -1,4 +1,4 @@
-import api from "../api";
+import api, { handleError, handleSuccess } from "../api";
 import axios from "axios";
 
 /**
@@ -82,5 +82,28 @@ export const downloadUrl = async (fileId, userId, expireSeconds) => {
   } catch (err) {
     console.error("Failed to get download URL:", err);
     throw err;
+  }
+};
+
+// admin specified
+export const listFiles = async () => {
+  try {
+    const res = await api.get(`/admin/files`);
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+export const deleteFile = async (filesId) => {
+  try {
+    const res = await api.delete(`/admin/files/${filesId}`, {
+      data: { filesId },
+    });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
   }
 };

@@ -7,10 +7,89 @@ import {
   joinChannel,
   listChannels,
 } from "../../api/services/channelService";
-import { searchUsers } from "../../api/services/authService";
+import { searchUsers } from "../../api/services/userService";
+
+// Define items per page constant
+const ITEMS_PER_PAGE = 6; // Set a standard limit for pagination
 
 // ==========================================
-// NEW COMPONENT: USER PROFILE MODAL
+// NEW COMPONENT: PAGINATION CONTROLS
+// ==========================================
+const PaginationControls = ({ currentPage, totalPages, onPageChange }) => {
+  if (totalPages <= 1) return null;
+
+  const pageNumbers = [];
+  // Logic for displaying a few pages: current, previous, next, first, last
+  const maxPagesToShow = 5;
+  const startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+  const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+  for (let i = startPage; i <= endPage; i++) {
+    pageNumbers.push(i);
+  }
+
+  return (
+    <div className="flex justify-center items-center space-x-2 mt-8">
+      {/* First Page */}
+      {currentPage > 1 && (
+        <button
+          onClick={() => onPageChange(1)}
+          className="p-2 text-sm font-medium text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400 transition"
+          aria-label="First page"
+        >
+          &lt;&lt;
+        </button>
+      )}
+
+      {/* Previous Button */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Previous
+      </button>
+
+      {/* Page Numbers */}
+      {pageNumbers.map((page) => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`w-10 h-10 flex items-center justify-center text-sm font-bold rounded-full transition-colors ${
+            page === currentPage
+              ? "bg-sky-600 text-white shadow-md"
+              : "bg-transparent text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700"
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+
+      {/* Next Button */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Next
+      </button>
+
+      {/* Last Page */}
+      {currentPage < totalPages && (
+        <button
+          onClick={() => onPageChange(totalPages)}
+          className="p-2 text-sm font-medium text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400 transition"
+          aria-label="Last page"
+        >
+          &gt;&gt;
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
+// NEW COMPONENT: USER PROFILE MODAL (Unchanged)
 // ==========================================
 const UserProfileModal = ({ user, isOpen, onClose }) => {
   if (!isOpen || !user) return null;
@@ -171,37 +250,58 @@ const UserProfileModal = ({ user, isOpen, onClose }) => {
 };
 
 // ==========================================
-// 1. CHANNELS VIEW
+// 1. CHANNELS VIEW (UPDATED FOR PAGINATION)
 // ==========================================
 const ChannelsView = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // State to hold the current page's channels
   const [channels, setChannels] = useState([]);
+  // State to hold the total number of channels (for pagination)
+  const [totalChannels, setTotalChannels] = useState(0);
+  // State for current page
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(totalChannels / ITEMS_PER_PAGE);
+
   const [inputName, setInputName] = useState("");
   const [inputID, setInputID] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Function to fetch channels with pagination
+  const fetchChannels = async (page = currentPage) => {
     if (!user?.id) return;
-    const fetchChannels = async () => {
-      try {
-        const data = await listChannels(user.id);
-        setChannels(data?.channels || []);
-      } catch (err) {
-        console.error("Failed to list channels");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchChannels();
-  }, [user?.id]);
+    setLoading(true);
+    try {
+      // NOTE: listChannels should be updated to accept page and limit
+      const limit = ITEMS_PER_PAGE;
+      const offset = (page - 1) * limit;
+      // Assume listChannels API is updated to support offset/limit (pagination)
+      // If your API returns all channels, you would paginate in the client here.
+      // For this solution, we assume the API is updated to fetch paginated data.
+      const data = await listChannels(user.id, limit, offset);
+
+      // Assume data structure is { channels: [], total: number }
+      setChannels(data?.channels || []);
+      setTotalChannels(data?.total || 0);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error("Failed to list channels:", err);
+      toast.error("Failed to fetch channels");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChannels(1); // Fetch the first page on component mount/user change
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreate = async () => {
     if (!inputName.trim()) return toast.error("Enter channel name");
     try {
       await createChannel(inputName, user.id);
-      const data = await listChannels(user.id);
-      setChannels(data?.channels || []);
+      // After creation, fetch the first page to show the new channel
+      await fetchChannels(1);
       setInputName("");
       toast.success("Channel created!");
     } catch (err) {
@@ -213,8 +313,8 @@ const ChannelsView = () => {
     if (!inputID.trim()) return toast.error("Enter channel ID");
     try {
       await joinChannel(inputID, user.id);
-      const data = await listChannels(user.id);
-      setChannels(data?.channels || []);
+      // After joining, fetch the first page to show the newly joined channel
+      await fetchChannels(1);
       setInputID("");
       toast.success("Joined channel!");
     } catch (err) {
@@ -222,9 +322,15 @@ const ChannelsView = () => {
     }
   };
 
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      fetchChannels(page);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Quick Actions */}
+      {/* Quick Actions (Unchanged) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-gradient-to-br from-sky-500 to-sky-600 rounded-2xl p-6 text-white shadow-lg transform transition hover:scale-[1.01]">
           <div className="flex items-center mb-4">
@@ -311,13 +417,13 @@ const ChannelsView = () => {
             Your Channels
           </h2>
           <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-xs font-medium">
-            {channels.length} Active
+            {totalChannels} Active
           </span>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
               <div
                 key={i}
                 className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"
@@ -325,100 +431,103 @@ const ChannelsView = () => {
             ))}
           </div>
         ) : channels.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {channels.map((ch) => (
-              <div
-                key={ch.channelId}
-                // 1. Guard Navigation
-                onClick={() =>
-                  !ch.isFrozen && navigate(`/channel/${ch.channelId}`)
-                }
-                // 2. Conditional Styling for Frozen state
-                className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-5 border transition-all duration-300 overflow-hidden
-                  ${
-                    ch.isFrozen
-                      ? "border-red-200 dark:border-red-900/30 cursor-not-allowed opacity-75"
-                      : "border-gray-200 dark:border-gray-700 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1"
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {channels.map((ch) => (
+                <div
+                  key={ch.channelId}
+                  onClick={() =>
+                    !ch.isFrozen && navigate(`/channel/${ch.channelId}`)
                   }
-                `}
-              >
-                {/* 3. Frozen Badge */}
-                {ch.isFrozen && (
-                  <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm z-10">
-                    Temporarily Banned
-                  </div>
-                )}
-
-                {/* Hover Icon (Only if not frozen) */}
-                {!ch.isFrozen && (
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg
-                      className="w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      />
-                    </svg>
-                  </div>
-                )}
-
-                <div className="flex items-center mb-4">
-                  {/* Grayscale icon if frozen */}
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md ${
+                  className={`group relative bg-white dark:bg-gray-800 rounded-2xl p-5 border transition-all duration-300 overflow-hidden
+                    ${
                       ch.isFrozen
-                        ? "bg-gray-400 dark:bg-gray-600"
-                        : "bg-gradient-to-tr from-gray-800 to-black dark:from-gray-700 dark:to-gray-600"
-                    }`}
-                  >
-                    {ch.name.charAt(0).toUpperCase()}
-                  </div>
+                        ? "border-red-200 dark:border-red-900/30 cursor-not-allowed opacity-75"
+                        : "border-gray-200 dark:border-gray-700 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1"
+                    }
+                  `}
+                >
+                  {ch.isFrozen && (
+                    <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm z-10">
+                      Temporarily Banned
+                    </div>
+                  )}
 
-                  <div className="ml-4 min-w-0">
-                    <h3
-                      className={`text-lg font-bold truncate pr-4 ${
+                  {!ch.isFrozen && (
+                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="flex items-center mb-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md ${
                         ch.isFrozen
-                          ? "text-gray-500 dark:text-gray-400"
-                          : "text-gray-900 dark:text-white"
+                          ? "bg-gray-400 dark:bg-gray-600"
+                          : "bg-gradient-to-tr from-gray-800 to-black dark:from-gray-700 dark:to-gray-600"
                       }`}
                     >
-                      {ch.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 font-mono truncate">
-                      #{ch.channelId.slice(0, 8)}
-                    </p>
-                  </div>
-                </div>
+                      {ch.name.charAt(0).toUpperCase()}
+                    </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <div className="flex -space-x-2">
-                    {[...Array(Math.min(3, ch.members?.length || 0))].map(
-                      (_, i) => (
-                        <div
-                          key={i}
-                          className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 border-2 border-white dark:border-gray-800"
-                        />
-                      )
-                    )}
-                    {(ch.members?.length || 0) > 3 && (
-                      <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-[10px] text-gray-500 font-bold">
-                        +{ch.members.length - 3}
-                      </div>
-                    )}
+                    <div className="ml-4 min-w-0">
+                      <h3
+                        className={`text-lg font-bold truncate pr-4 ${
+                          ch.isFrozen
+                            ? "text-gray-500 dark:text-gray-400"
+                            : "text-gray-900 dark:text-white"
+                        }`}
+                      >
+                        {ch.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 font-mono truncate">
+                        #{ch.channelId.slice(0, 8)}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    {ch.members?.length || 0} Members
-                  </span>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex -space-x-2">
+                      {[...Array(Math.min(3, ch.members?.length || 0))].map(
+                        (_, i) => (
+                          <div
+                            key={i}
+                            className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 border-2 border-white dark:border-gray-800"
+                          />
+                        )
+                      )}
+                      {(ch.members?.length || 0) > 3 && (
+                        <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-[10px] text-gray-500 font-bold">
+                          +{ch.members.length - 3}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {ch.members?.length || 0} Members
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {/* PAGINATION CONTROLS */}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700 text-center">
             <div className="w-16 h-16 bg-sky-50 dark:bg-sky-900/30 rounded-full flex items-center justify-center mb-4 text-sky-500">
@@ -450,33 +559,53 @@ const ChannelsView = () => {
 };
 
 // ==========================================
-// 2. USER SEARCH VIEW (UPDATED)
+// 2. USER SEARCH VIEW (UPDATED FOR PAGINATION)
 // ==========================================
 const UserSearchView = () => {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  // State to hold all search results
+  const [allResults, setAllResults] = useState([]);
+  // State for current page
+  const [currentPage, setCurrentPage] = useState(1);
   const [searching, setSearching] = useState(false);
-
-  // State for displaying the profile modal
   const [selectedUser, setSelectedUser] = useState(null);
+
+  // Client-side pagination logic
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedResults = allResults.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+  const totalPages = Math.ceil(allResults.length / ITEMS_PER_PAGE);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
     setSearching(true);
+    setCurrentPage(1); // Reset to page 1 for a new search
     try {
+      // NOTE: Assuming searchUsers API returns ALL matching results
       const data = await searchUsers(query);
-      setResults(data?.users || []);
+      setAllResults(data?.users || []);
     } catch (error) {
       toast.error("Search failed");
+      setAllResults([]);
     } finally {
       setSearching(false);
     }
   };
 
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      // NOTE: Add logic here to scroll back to the top of the list if necessary
+      // window.scrollTo(0, 0);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* --- Search Header --- */}
+      {/* --- Search Header (Unchanged) --- */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Find Colleagues
@@ -486,7 +615,7 @@ const UserSearchView = () => {
         </p>
       </div>
 
-      {/* --- Search Input --- */}
+      {/* --- Search Input (Unchanged) --- */}
       <form onSubmit={handleSearch} className="relative mb-10 group">
         <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
           <svg
@@ -521,47 +650,60 @@ const UserSearchView = () => {
 
       {/* --- Results List --- */}
       <div className="space-y-4">
-        {results.map((u) => (
-          <div
-            key={u.id}
-            className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
-          >
-            <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-full flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold text-lg">
-              {u.username[0].toUpperCase()}
-            </div>
-            <div className="ml-4 flex-1">
-              <h4 className="text-base font-bold text-gray-900 dark:text-white">
-                {u.username}
-              </h4>
-              <p className="text-sm text-gray-500">{u.email}</p>
-            </div>
+        {searching ? (
+          <div className="text-center text-gray-400 py-8">Searching...</div>
+        ) : paginatedResults.length > 0 ? (
+          <>
+            {paginatedResults.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-full flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold text-lg">
+                  {u.username[0].toUpperCase()}
+                </div>
+                <div className="ml-4 flex-1">
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                    {u.username}
+                  </h4>
+                  <p className="text-sm text-gray-500">{u.email}</p>
+                </div>
 
-            {/* New View Profile Button */}
-            <button
-              onClick={() => setSelectedUser(u)}
-              className="mr-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              View
-            </button>
+                {/* New View Profile Button */}
+                <button
+                  onClick={() => setSelectedUser(u)}
+                  className="mr-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  View
+                </button>
 
-            {/* Copy ID Button */}
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(u.id);
-                toast.success("Copied!");
-              }}
-              className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
-            >
-              Copy ID
-            </button>
-          </div>
-        ))}
-        {results.length === 0 && query && !searching && (
-          <div className="text-center text-gray-400 py-8">No users found</div>
+                {/* Copy ID Button */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(u.id);
+                    toast.success("Copied!");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
+                >
+                  Copy ID
+                </button>
+              </div>
+            ))}
+            {/* PAGINATION CONTROLS */}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
+        ) : (
+          query && (
+            <div className="text-center text-gray-400 py-8">No users found</div>
+          )
         )}
       </div>
 
-      {/* --- Profile Modal Injection --- */}
+      {/* --- Profile Modal Injection (Unchanged) --- */}
       <UserProfileModal
         user={selectedUser}
         isOpen={!!selectedUser}
@@ -575,16 +717,16 @@ const UserSearchView = () => {
 // 3. MAIN HOME (Unchanged)
 // ==========================================
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("channels");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-center mb-10">
         <div className="bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl inline-flex shadow-inner">
           <button
-            onClick={() => setActiveTab("channels")}
+            onClick={() => setActiveTab("dashboard")}
             className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-              activeTab === "channels"
+              activeTab === "dashboard"
                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
             }`}
@@ -601,11 +743,176 @@ export default function Home() {
           >
             Find Users
           </button>
+          <button
+            onClick={() => setActiveTab("channels")}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+              activeTab === "channels"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            }`}
+          >
+            Find channels
+          </button>
         </div>
       </div>
+      {/* Min-height is important to prevent content jump when switching views */}
       <div className="min-h-[600px]">
-        {activeTab === "channels" ? <ChannelsView /> : <UserSearchView />}
+        {activeTab === "dashboard" && <ChannelsView />}
+        {activeTab === "users" && <UserSearchView />}
+        {activeTab === "channels" && <ChannelSearchView />}
       </div>
     </div>
   );
 }
+
+const ChannelSearchView = () => {
+  const [query, setQuery] = useState("");
+  // State to hold all search results
+  const [allResults, setAllResults] = useState([]);
+  // State for current page
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searching, setSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // Client-side pagination logic
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedResults = allResults.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+  const totalPages = Math.ceil(allResults.length / ITEMS_PER_PAGE);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setSearching(true);
+    setCurrentPage(1); // Reset to page 1 for a new search
+    try {
+      // NOTE: Assuming searchUsers API returns ALL matching results
+      const data = await searchUsers(query);
+      setAllResults(data?.users || []);
+    } catch (error) {
+      toast.error("Search failed");
+      setAllResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      // NOTE: Add logic here to scroll back to the top of the list if necessary
+      // window.scrollTo(0, 0);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* --- Search Header (Unchanged) --- */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Find Colleagues
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400">
+          Search for people to add to your workspace
+        </p>
+      </div>
+
+      {/* --- Search Input (Unchanged) --- */}
+      <form onSubmit={handleSearch} className="relative mb-10 group">
+        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+          <svg
+            className="w-5 h-5 text-gray-400 group-focus-within:text-sky-500 transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by username or email..."
+          className="block w-full pl-12 pr-32 py-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-4 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm text-lg"
+        />
+        <button
+          type="submit"
+          disabled={searching}
+          className="absolute right-2 top-2 bottom-2 px-6 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+        >
+          {searching ? "..." : "Search"}
+        </button>
+      </form>
+
+      {/* --- Results List --- */}
+      <div className="space-y-4">
+        {searching ? (
+          <div className="text-center text-gray-400 py-8">Searching...</div>
+        ) : paginatedResults.length > 0 ? (
+          <>
+            {paginatedResults.map((u) => (
+              <div
+                key={u.id}
+                className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="w-12 h-12 bg-sky-100 dark:bg-sky-900/30 rounded-full flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold text-lg">
+                  {u.username[0].toUpperCase()}
+                </div>
+                <div className="ml-4 flex-1">
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                    {u.username}
+                  </h4>
+                  <p className="text-sm text-gray-500">{u.email}</p>
+                </div>
+
+                {/* New View Profile Button */}
+                <button
+                  onClick={() => setSelectedUser(u)}
+                  className="mr-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  View
+                </button>
+
+                {/* Copy ID Button */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(u.id);
+                    toast.success("Copied!");
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50 dark:bg-sky-900/20 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
+                >
+                  Copy ID
+                </button>
+              </div>
+            ))}
+            {/* PAGINATION CONTROLS */}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
+        ) : (
+          query && (
+            <div className="text-center text-gray-400 py-8">No users found</div>
+          )
+        )}
+      </div>
+
+      {/* --- Profile Modal Injection (Unchanged) --- */}
+      <UserProfileModal
+        user={selectedUser}
+        isOpen={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+      />
+    </div>
+  );
+};

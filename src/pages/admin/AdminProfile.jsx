@@ -4,7 +4,7 @@ import {
   profileUpdate,
   changePassword,
   UploadProfile,
-} from "../../api/services/authService";
+} from "../../api/services/userService";
 import toast from "react-hot-toast";
 
 // --- START: AvatarUploader Component ---

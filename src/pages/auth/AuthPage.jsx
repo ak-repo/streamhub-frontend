@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/context";
 import Logo from "../../components/Logo";
 import toast from "react-hot-toast";
-import { forgetPassword } from "../../api/services/authService";
+import { forgetPassword } from "../../api/services/userService";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);

@@ -9,12 +9,12 @@ import { Toaster } from "react-hot-toast";
 
 import AuthProvider from "./context/AuthProvider";
 import ChannelProvider from "./context/ChannelProvider";
-import { useAuth } from "./context/context";
 
 /* --- Auth Pages --- */
 import AuthPage from "./pages/auth/AuthPage";
 import EmailVerification from "./pages/auth/EmailVerification";
 import EmailVerified from "./pages/auth/EmailVerified";
+import ForgotPassword from "./pages/auth/ForgetPassword";
 
 /* --- User Pages --- */
 import HomeLayout from "./pages/user/HomeLayout";
@@ -33,18 +33,24 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import ChannelsManagement from "./pages/admin/ChannelsManagement";
 import FilesManagement from "./pages/admin/FilesManagement";
 import AdminProfile from "./pages/admin/AdminProfile";
-import ForgotPassword from "./pages/auth/ForgetPassword";
+import { useAuth } from "./context/context";
+import Request from "./pages/user/Request";
 
 /* ----------------------------------
    PROTECTED ROUTES
 ---------------------------------- */
 function UserProtected() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>; // Wait for localStorage load
+
   return user ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 function AdminProtected() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
 
   if (!user) return <Navigate to="/" replace />;
   if (user.role !== "super-admin") return <Navigate to="/home" replace />;
@@ -63,22 +69,18 @@ export default function App() {
           <Toaster position="bottom-right" />
 
           <Routes>
-            {/* -------------------------
-                PUBLIC ROUTES
-            -------------------------- */}
+            {/* PUBLIC ROUTES */}
             <Route path="/" element={<AuthPage />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-
             <Route path="/verify-gen" element={<EmailVerification />} />
             <Route path="/verify-link" element={<EmailVerified />} />
 
-            {/* -------------------------
-                USER ROUTES
-            -------------------------- */}
+            {/* USER ROUTES */}
             <Route element={<UserProtected />}>
               <Route path="/home" element={<HomeLayout />}>
                 <Route index element={<Home />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="invites" element={<Request />} />
               </Route>
 
               <Route path="/channel/:id" element={<ChannelPage />}>
@@ -89,9 +91,7 @@ export default function App() {
               </Route>
             </Route>
 
-            {/* -------------------------
-                ADMIN ROUTES
-            -------------------------- */}
+            {/* ADMIN ROUTES */}
             <Route path="/admin" element={<AdminProtected />}>
               <Route element={<AdminLayout />}>
                 <Route index element={<Navigate to="dashboard" replace />} />

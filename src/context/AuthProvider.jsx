@@ -5,7 +5,7 @@ import {
   loginService,
   registerService,
   verifyLinkService,
-} from "../api/services/authService";
+} from "../api/services/userService";
 import { useNavigate } from "react-router-dom";
 
 function AuthProvider({ children }) {
@@ -14,6 +14,9 @@ function AuthProvider({ children }) {
 
   // Load user safely on mount
   // Load user from localStorage on mount
+  const [loading, setLoading] = useState(true); // prevents redirect on reload
+
+  // Load user from localStorage on initial load
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("user");
@@ -24,6 +27,7 @@ function AuthProvider({ children }) {
       console.error("Invalid user in localStorage. Clearing...", err);
       localStorage.removeItem("user");
     }
+    setLoading(false); // hydration complete
   }, []);
 
   // Save user whenever it changes
@@ -112,6 +116,8 @@ function AuthProvider({ children }) {
         logout,
         verifyLink,
         generateLink,
+        loading,
+        setLoading,
       }}
     >
       {children}

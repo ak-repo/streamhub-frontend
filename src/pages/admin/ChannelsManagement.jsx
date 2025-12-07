@@ -4,7 +4,7 @@ import {
   freezeChannel,
   unfreezeChannel,
   deleteChannel,
-} from "../../api/admin_services/channels";
+} from "../../api/services/channelService";
 
 function ChannelManagement() {
   const [channels, setChannels] = useState([]);

@@ -41,13 +41,12 @@ function Header() {
         <Logo />
       </div>
 
-     
-
       <div className="flex items-center space-x-3">
         {/* Notification Button */}
         <button
           aria-label="Notifications"
           className="relative p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+          onClick={() => navigate("/home/invites")}
         >
           <svg
             className="w-5 h-5 text-gray-600 dark:text-gray-300"
@@ -66,7 +65,7 @@ function Header() {
         </button>
 
         {/* Theme Toggle */}
-        <button
+        {/* <button
           onClick={toggleTheme}
           aria-label="Toggle theme"
           className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
@@ -84,7 +83,7 @@ function Header() {
               d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
             />
           </svg>
-        </button>
+        </button> */}
 
         {/* Profile */}
         <div className="relative" ref={menuRef}>
@@ -153,8 +152,11 @@ function Header() {
                 <span>Settings</span>
               </button>
 
-              <button className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2">
-                <span>Notifications</span>
+              <button
+                className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2"
+                onClick={() => navigate("/home/invites")}
+              >
+                <span>Invites</span>
               </button>
 
               {/* Logout */}

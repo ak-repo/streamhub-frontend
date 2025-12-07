@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Lock, ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
-import { verifyPasswordReset } from "../../api/services/authService"; // You need to create this
+import { verifyPasswordReset } from "../../api/services/userService"; // You need to create this
 
 export default function ForgotPassword() {
   const location = useLocation();

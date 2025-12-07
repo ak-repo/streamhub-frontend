@@ -6,7 +6,7 @@ import {
   banUser,
   unbanUser, // Added unbanUser
   deleteUser,
-} from "../../api/admin_services/users";
+} from "../../api/services/userService";
 
 // Utility function to format date string
 const formatDate = (dateString) => {
@@ -361,7 +361,9 @@ function UsersManagement() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user.id, user.username)}
+                            onClick={() =>
+                              handleDeleteUser(user.id, user.username)
+                            }
                             className="text-red-600 hover:text-red-900"
                             title="Delete User"
                             disabled={user.role === "super-admin"}
