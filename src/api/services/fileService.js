@@ -4,23 +4,20 @@ import axios from "axios";
 /**
  * Upload a file using presigned URL
  */
-export const uploadFile = async (file, userId, channelId, isPublic) => {
+export const uploadFile = async (file, channelId, isPublic) => {
   try {
     if (!file) {
       alert("Select a file first!");
       return null;
     }
 
-    console.log("channel id:", channelId);
-
     // 1. Request presigned upload URL
     const { data } = await api.post(`/files/upload-url`, {
-      ownerId: userId, // camelCase
-      filename: file.name, // already camelCase
-      size: file.size,
-      mimeType: file.type,
-      isPublic: isPublic,
-      channelId: channelId, // camelCase
+      filename: file.name,
+      size_bytes: file.size,
+      mime_type: file.type,
+      is_public: isPublic,
+      channel_id: channelId,
     });
 
     const uploadUrl = data?.uploadUrl; // changed from upload_url
@@ -36,7 +33,8 @@ export const uploadFile = async (file, userId, channelId, isPublic) => {
 
     // 3. Confirm upload
     const res = await api.post(`/files/confirm`, {
-      fileId: fileId, // camelCase
+      file_id: fileId,
+      success: true,
     });
 
     console.log("file upload confirm res:", res);
@@ -50,15 +48,11 @@ export const uploadFile = async (file, userId, channelId, isPublic) => {
 /**
  * List files for a channel
  */
-export const listFilesByChannel = async (userId, channelId) => {
+export const listFilesByChannel = async (channelId) => {
   try {
-    const res = await api.get(`/files`, {
-      params: {
-        channelId: channelId, // camelCase
-        requesterId: userId, // camelCase
-      },
-    });
-
+    const res = await api.get(
+      `/files?channel_id=${channelId}&limit=10&offset=10`
+    );
     return res.data;
   } catch (err) {
     console.error("Failed to load files:", err);
@@ -69,10 +63,10 @@ export const listFilesByChannel = async (userId, channelId) => {
 /**
  * Get a temporary download URL
  */
-export const downloadUrl = async (fileId, userId, expireSeconds) => {
+export const downloadUrl = async (fileId, expireSeconds) => {
   try {
     const res = await api.get(
-      `/files/download-url?fileId=${fileId}&requesterId=${userId}&expireSeconds=${expireSeconds}`
+      `/files/download-url?file_id=${fileId}&expireSeconds=${expireSeconds}`
     );
 
     const url = res.data?.downloadUrl; // changed from download_url
@@ -85,10 +79,31 @@ export const downloadUrl = async (fileId, userId, expireSeconds) => {
   }
 };
 
-// admin specified
-export const listFiles = async () => {
+export const deleteFile = async (fileId) => {
   try {
-    const res = await api.get(`/admin/files`);
+    const res = await api.delete(`/files/${fileId}`);
+
+    return res?.data;
+  } catch (e) {
+    handleError(e);
+  }
+};
+
+export const getStorageUsage = async (channel_id) => {
+  try {
+    const res = await api.get(`/files/storage/${channel_id}`);
+    return res?.data;
+  } catch (e) {
+    handleError(e);
+  }
+};
+
+
+
+//  ----------------------------------------  -------- admin specified
+export const adminListFiles = async (limit, offset) => {
+  try {
+    const res = await api.get(`/admin/files?limit=${limit}&offset=${offset}`);
     handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
@@ -96,7 +111,7 @@ export const listFiles = async () => {
   }
 };
 
-export const deleteFile = async (filesId) => {
+export const adminDeleteFile = async (filesId) => {
   try {
     const res = await api.delete(`/admin/files/${filesId}`, {
       data: { filesId },

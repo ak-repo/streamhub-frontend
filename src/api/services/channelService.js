@@ -1,11 +1,15 @@
 import api, { handleError, handleSuccess } from "../api";
 
-export const createChannel = async (name, userId) => {
+/* --------------------------------------------------------
+   CREATE CHANNEL
+---------------------------------------------------------*/
+export const createChannel = async (name, description, visibility) => {
   if (!name) return;
   try {
     const res = await api.post("/channels/create", {
-      name: name,
-      creatorId: userId, // changed from creator_id
+      name,
+      description,
+      visibility,
     });
     handleSuccess(res?.message);
     return res?.data;
@@ -14,95 +18,82 @@ export const createChannel = async (name, userId) => {
   }
 };
 
+/* --------------------------------------------------------
+   LIST USER CHANNELS
+---------------------------------------------------------*/
 export const listChannels = async () => {
   try {
-    const res = await api.get(`/channels/`);
+    const res = await api.get(`/channels`);
+
+    console.log("list channel: ", res?.data); // TODO remove
+
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const joinChannel = async (channelId, userId) => {
-  try {
-    const res = await api.post(`/channels/join`, {
-      channelId: channelId, // changed from channel_id
-      userId: userId, // changed from user_id
-    });
-    return res?.data;
-  } catch (err) {
-    handleError(err);
-  }
-};
-
+/* --------------------------------------------------------
+   GET CHANNEL DETAILS
+---------------------------------------------------------*/
 export const getChannel = async (channelId) => {
   try {
     const res = await api.get(`/channels/channel/${channelId}`);
+    console.log("channel: ", res?.data);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
+/* --------------------------------------------------------
+   LIST CHANNEL MEMBERS
+---------------------------------------------------------*/
 export const getMembers = async (channelId) => {
   try {
     const res = await api.get(`/channels/members/${channelId}`);
+    console.log("memevers listing: ", res?.data); // TODO remove
+
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const getMsgHistory = async (channelId) => {
-  console.log(channelId, "id");
+/* --------------------------------------------------------
+   LIST MESSAGE HISTORY
+---------------------------------------------------------*/
+export const getMsgHistory = async (channelId, limit = 50, offset = 0) => {
   try {
-    const res = await api.get(`/channels/${channelId}/history`);
-    return res?.data;
-  } catch (err) {
-    handleError(err);
-  }
-};
-
-export const leaveChannel = async (channelId, userId) => {
-  try {
-    const res = await api.post(`/channels/leave`, {
-      channelId: channelId,
-      userId: userId,
-    });
-    return res?.data;
-  } catch (err) {
-    handleError(err);
-  }
-};
-
-export const deleteChannel = async (channelId, userId) => {
-  try {
-    const res = await api.delete(
-      `/channels/delete?requesterId=${userId}&channelId=${channelId}`
+    const res = await api.get(
+      `/channels/${channelId}/history?limit=${limit}&offset=${offset}`
     );
-    handleSuccess(res?.message);
+    console.log("msg history: ", res?.data); // TODO remove
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
-export const searchChannels = async () => {
-  console.log("clicked channel");
-};
-
-export const sendJoin = async (userId, channelId) => {
+/* --------------------------------------------------------
+   LEAVE CHANNEL
+---------------------------------------------------------*/
+export const leaveChannel = async (channelId) => {
   try {
-    const res = await api.post("/channels/sendjoin", { channelId, userId });
-    handleSuccess(res?.message);
+    console.log("if", channelId);
+    const res = await api.delete(`/channels/leave/${channelId}`);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
-export const sendInvite = async (channelId, userId) => {
+
+/* --------------------------------------------------------
+   DELETE CHANNEL (correct query names)
+---------------------------------------------------------*/
+export const deleteChannel = async (channelId) => {
   try {
-    const res = await api.post("/channels/sendinvite", { channelId, userId });
+    const res = await api.delete(`/channels/${channelId}`);
     handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
@@ -110,29 +101,74 @@ export const sendInvite = async (channelId, userId) => {
   }
 };
 
+/* --------------------------------------------------------
+   SEND JOIN REQUEST
+---------------------------------------------------------*/
+export const sendJoin = async (channelId) => {
+  try {
+    const res = await api.post("/channels/sendjoin", {
+      channel_id: channelId,
+    });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+/* --------------------------------------------------------
+   SEND INVITE
+   backend expects: 
+
+---------------------------------------------------------*/
+export const sendInvite = async (channelId, targetUserId) => {
+  try {
+    const res = await api.post("/channels/sendinvite", {
+      channel_id: channelId,
+      target_user_id: targetUserId,
+    });
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
+
+/* --------------------------------------------------------
+   LIST USER INVITES
+---------------------------------------------------------*/
 export const userInvites = async () => {
   try {
     const res = await api.get("/channels/invites");
-    handleSuccess(res?.message);
+    console.log("list user invites:", res); //TODO remove
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
+/* --------------------------------------------------------
+   LIST CHANNEL JOIN REQUESTS
+---------------------------------------------------------*/
 export const channelJoins = async (channelId) => {
   try {
     const res = await api.get(`/channels/joins/${channelId}`);
-    handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
     handleError(err);
   }
 };
 
+/* --------------------------------------------------------
+   UPDATE REQUEST STATUS
+   backend expects: { requestId, status }
+---------------------------------------------------------*/
 export const updateRequstStatus = async (reqId, status) => {
   try {
-    const res = await api.post("/channels/updatereq", { reqId, status });
+    const res = await api.post("/channels/updatereq", {
+      request_id: reqId,
+      status: status,
+    });
     handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
@@ -140,23 +176,29 @@ export const updateRequstStatus = async (reqId, status) => {
   }
 };
 
-// admin-specified services
+//------------------------------------ADMIN only --------------------------------------------------
+export const adminListChannels = async (limit, offset) => {
+  try {
+    const res = await api.get(
+      `/admin/channels?limit=${limit}&offset=${offset}`
+    );
+    console.log("admin channel list", res.data); //TODO remove
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
 
-// export const listChannels = async () => {
-//   try {
-//     const res = await api.get(`/admin/channels`);
-//     handleSuccess(res?.message);
-//     return res?.data;
-//   } catch (err) {
-//     handleError(err);
-//   }
-// };
-
-export const freezeChannel = async (channelId, reason) => {
+/* --------------------------------------------------------
+   ADMIN: FREEZE CHANNEL
+---------------------------------------------------------*/
+export const adminFreezeChannel = async (channelId, reason) => {
   try {
     const res = await api.post("/admin/channels/freeze", {
-      channelId: channelId,
+      channel_id: channelId,
       reason: reason,
+      freeze: true,
     });
     handleSuccess(res?.message);
     return res?.data;
@@ -165,11 +207,15 @@ export const freezeChannel = async (channelId, reason) => {
   }
 };
 
-export const unfreezeChannel = async (channelId) => {
+/* --------------------------------------------------------
+   ADMIN: UNFREEZE CHANNEL
+---------------------------------------------------------*/
+export const adminUnfreezeChannel = async (channelId, reason) => {
   try {
-    console.log(channelId);
     const res = await api.post("/admin/channels/unfreeze", {
-      channelId: channelId,
+      channel_id: channelId,
+      reason: reason,
+      freeze: false,
     });
     handleSuccess(res?.message);
     return res?.data;
@@ -178,13 +224,29 @@ export const unfreezeChannel = async (channelId) => {
   }
 };
 
-// export const deleteChannel = async (channelId) => {
-//   try {
-//     const res = await api.delete(`/admin/channels/${channelId}`);
+export const adminDeleteChannel = async (channelId) => {
+  try {
+    const res = await api.delete(`/admin/channels/${channelId}`);
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (err) {
+    handleError(err);
+  }
+};
 
-//     handleSuccess(res?.data?.message);
-//     return res?.data;
-//   } catch (err) {
-//     handleError(err);
-//   }
-// };
+/// ________________________________________common________________________________
+/* --------------------------------------------------------
+   SEARCH PLACEHOLDER
+---------------------------------------------------------*/
+export const searchChannels = async (query, limit, offset) => {
+  try {
+    const res = await api.get(
+      `/channels/search?query=${query}&limit=${limit}&offset=${offset}`
+    );
+    console.log("search channels:", res?.data);
+    handleSuccess(res?.message);
+    return res?.data;
+  } catch (error) {
+    handleError(error);
+  }
+};

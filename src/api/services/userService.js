@@ -75,7 +75,7 @@ export const verifyPasswordReset = async (email, otp, password) => {
     const res = await api.post("/verify-password", {
       email: email,
       token: otp,
-      password: password,
+      new_password: password,
     });
     return res?.data;
   } catch (error) {
@@ -86,10 +86,10 @@ export const verifyPasswordReset = async (email, otp, password) => {
 // -------------------------------
 // Authenticated APIs
 // -------------------------------
-export const changePassword = async (password, new_password) => {
+export const changePassword = async (current_password, new_password) => {
   try {
-    const res = await api.post("/auth/password-change", {
-      password,
+    const res = await api.post("/auth/change-password", {
+      current_password,
       new_password,
     });
     handleSuccess(res?.message);
@@ -99,9 +99,9 @@ export const changePassword = async (password, new_password) => {
   }
 };
 
-export const profileUpdate = async (email, username) => {
+export const profileUpdate = async (username) => {
   try {
-    const res = await api.post("/auth/profile-update", { email, username });
+    const res = await api.post("/auth/profile-update", { username });
     handleSuccess(res?.message);
     return res?.data;
   } catch (error) {
@@ -145,9 +145,12 @@ export const UploadProfile = async (formData) => {
 };
 
 // admin
-export const listUsers = async () => {
+export const listUsers = async (filter, limit, offset) => {
+  console.log("f:", filter, " limit", limit, "off:c", offset);
   try {
-    const res = await api.get(`/admin/users`);
+    const res = await api.get(
+      `/admin/users?filter=${filter}&limit=${limit}&offset=${offset}`
+    );
     handleSuccess(res?.message);
     return res?.data;
   } catch (err) {
@@ -156,10 +159,9 @@ export const listUsers = async () => {
 };
 
 export const banUser = async (userId, reason) => {
-  console.log("banninf: ", userId, "reason:", reason);
   try {
     const res = await api.post("/admin/users/ban", {
-      userId: userId,
+      target_user_id: userId,
       reason: reason,
     });
     handleSuccess(res?.message);
@@ -172,7 +174,7 @@ export const banUser = async (userId, reason) => {
 export const unbanUser = async (userId, reason) => {
   try {
     const res = await api.post("/admin/users/unban", {
-      userId: userId,
+      target_user_id: userId,
       reason: reason,
     });
     handleSuccess(res?.message);
@@ -185,8 +187,8 @@ export const unbanUser = async (userId, reason) => {
 export const updateUserRole = async (userId, role) => {
   try {
     const res = await api.post("/admin/users/change-role", {
-      userId: userId,
-      role: role,
+      target_user_id: userId,
+      new_role: role,
     });
     handleSuccess(res?.message);
     return res?.data;
@@ -197,7 +199,7 @@ export const updateUserRole = async (userId, role) => {
 
 export const deleteUser = async (userId) => {
   try {
-    const res = await api.delete(`/users/${userId}`);
+    const res = await api.delete(`/admin/users/${userId}`);
     handleSuccess(res?.message);
     return res?.data;
   } catch (err) {

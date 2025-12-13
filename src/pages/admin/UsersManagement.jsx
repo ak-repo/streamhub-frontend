@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from "react";
-// Import all necessary functions from the consolidated API file
 import {
   listUsers,
   updateUserRole,
   banUser,
-  unbanUser, // Added unbanUser
+  unbanUser,
   deleteUser,
 } from "../../api/services/userService";
 
-// Utility function to format date string
-const formatDate = (dateString) => {
+// Format timestamp (handles seconds or ms)
+const formatDate = (timestamp) => {
   try {
-    const date = new Date(dateString);
+    const ts = Number(timestamp);
+    const date =
+      ts.toString().length <= 10 ? new Date(ts * 1000) : new Date(ts);
+
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -19,12 +21,11 @@ const formatDate = (dateString) => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  } catch (e) {
-    return dateString;
+  } catch {
+    return timestamp;
   }
 };
 
-// Utility function to get role badge color
 const getRoleBadgeColor = (role) => {
   switch (role) {
     case "super-admin":
@@ -44,366 +45,275 @@ function UsersManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  // Added banReason state for more complete ban/unban API calls
+
+  // pagination (same as File Manager)
+  const [page, setPage] = useState(1);
+  const limit = 9;
+
   const [editForm, setEditForm] = useState({
     role: "",
     isBanned: false,
-    banReason: "", // Added state for ban reason
+    banReason: "",
   });
 
-  /**
-   * Fetches users from the API.
-   */
+  // ==========================
+  // FETCH USERS
+  // ==========================
+  const fetchUsers = async (searchValue = searchTerm, pageValue = page) => {
+    try {
+      setLoading(true);
+
+      // EXACT FILE MANAGER STYLE: limit + offset
+      const offset = limit * (pageValue - 1);
+      const data = await listUsers(searchValue, limit, offset);
+
+      setUsers(data?.users || []);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // initial load
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        // listUsers now returns an object with a 'users' array, as per common API practices
-        const data = await listUsers();
-        setUsers(data?.users || []);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-        // Optionally show a toast notification here
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchUsers();
   }, []);
 
-  // Filter users based on search term
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // reload on search or page change
+  useEffect(() => {
+    fetchUsers(searchTerm, page);
+  }, [searchTerm, page]);
 
-  // Handle viewing user details
+  // ==========================
+  // FILTER USERS (client-side)
+  // ==========================
+  const filteredUsers = users.filter((user) => {
+    const s = searchTerm.toLowerCase();
+    return (
+      user.username.toLowerCase().includes(s) ||
+      user.email.toLowerCase().includes(s)
+    );
+  });
+
+  // ==========================
+  // Details Modal
+  // ==========================
   const handleViewDetails = (user) => {
     setSelectedUser(user);
     setShowDetailsModal(true);
   };
 
-  // Handle editing user
+  // ==========================
+  // Edit Modal
+  // ==========================
   const handleEditUser = (user) => {
     setEditingUser(user);
     setEditForm({
       role: user.role || "user",
-      isBanned: user.isBanned || false,
-      banReason: user.banReason || "", // Initialize banReason
+      isBanned: !!user.isBanned,
+      banReason: user.banReason || "",
     });
     setShowEditModal(true);
   };
 
-  /**
-   * Handles saving edited user data and making API calls for role/ban changes.
-   */
   const handleSaveEdit = async () => {
     if (!editingUser) return;
 
     try {
       setLoading(true);
-      const updates = {}; // Collect updates to apply to the local state
 
-      // 1. Handle Role Update
+      const updates = {};
+
       if (editingUser.role !== editForm.role) {
         await updateUserRole(editingUser.id, editForm.role);
         updates.role = editForm.role;
       }
 
-      // 2. Handle Ban Status Update
       if (editingUser.isBanned !== editForm.isBanned) {
         if (editForm.isBanned) {
-          // Ban the user
           await banUser(editingUser.id, editForm.banReason);
+          updates.isBanned = true;
+          updates.banReason = editForm.banReason;
         } else {
-          // Unban the user
           await unbanUser(editingUser.id);
+          updates.isBanned = false;
+          updates.banReason = "";
         }
-        updates.isBanned = editForm.isBanned;
-        updates.banReason = editForm.isBanned ? editForm.banReason : "";
       }
 
-      // Update local state (Optimistic Update)
-      setUsers(
-        users.map((user) =>
-          user.id === editingUser.id ? { ...user, ...updates } : user
-        )
+      setUsers((prev) =>
+        prev.map((u) => (u.id === editingUser.id ? { ...u, ...updates } : u))
       );
 
       setShowEditModal(false);
       setEditingUser(null);
     } catch (err) {
       console.error("Error updating user:", err);
-      // NOTE: For a real-world app, you'd likely want to re-fetch users or roll back the local state on failure
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle deleting user
+  // ==========================
+  // Delete User
+  // ==========================
   const handleDeleteUser = async (userId, username) => {
-    if (
-      window.confirm(`Are you sure you want to delete the user "${username}"?`)
-    ) {
-      try {
-        setLoading(true);
-        await deleteUser(userId);
-        // Update local state immediately after successful deletion
-        setUsers(users.filter((user) => user.id !== userId));
-      } catch (err) {
-        console.error("Error deleting user:", err);
-      } finally {
-        setLoading(false);
-      }
+    if (!window.confirm(`Delete user "${username}"?`)) return;
+
+    try {
+      setLoading(true);
+      await deleteUser(userId);
+
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (err) {
+      console.error("Error deleting user:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ==========================
+  // RENDER
+  // ==========================
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Users Management</h1>
-          <p className="text-gray-600">Total Users: {users.length}</p>
+          <p className="text-gray-600">Showing {users.length} users</p>
         </div>
 
-        {/* Search Bar */}
         <div className="relative w-full sm:w-64">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              className="h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
           <input
             type="text"
             placeholder="Search users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
           />
         </div>
       </div>
 
-      {/* Loading State */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-gray-600">Loading users...</p>
-        </div>
+        <div className="text-center py-10 text-gray-600">Loading...</div>
       ) : (
         <>
-          {/* Users Table */}
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
+          {/* Table */}
+          <div className="overflow-x-auto border rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">
                     Joined
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">
                     Actions
                   </th>
                 </tr>
               </thead>
+
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                              <svg
-                                className="h-6 w-6 text-blue-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                />
-                              </svg>
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.username}
-                            </div>
-                            <div className="text-sm text-gray-500 truncate max-w-xs">
-                              {user.email}
-                            </div>
-                          </div>
+                    <tr key={user.id}>
+                      {/* User */}
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900">
+                          {user.username}
                         </div>
+                        <div className="text-gray-500">{user.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+
+                      {/* Role */}
+                      <td className="px-6 py-4">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(
+                          className={`px-2 py-1 text-xs rounded-full ${getRoleBadgeColor(
                             user.role
                           )}`}
                         >
-                          {user.role || "user"}
+                          {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {user.emailVerified ? (
-                            <>
-                              <svg
-                                className="h-5 w-5 text-green-500 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                              <span className="text-green-600">Verified</span>
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                className="h-5 w-5 text-red-500 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                              <span className="text-red-600">Unverified</span>
-                            </>
-                          )}
-                          {user.isBanned && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
-                              Banned
-                            </span>
-                          )}
-                        </div>
+
+                      {/* Status */}
+                      <td className="px-6 py-4">
+                        {user.emailVerified ? "Verified" : "Unverified"}
+                        {user.isBanned && (
+                          <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
+                            Banned
+                          </span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+
+                      {/* Joined */}
+                      <td className="px-6 py-4 text-gray-500">
                         {formatDate(user.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleViewDetails(user)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="View Details"
-                          >
-                            <svg
-                              className="h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleEditUser(user)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Edit User"
-                          >
-                            <svg
-                              className="h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleDeleteUser(user.id, user.username)
-                            }
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete User"
-                            disabled={user.role === "super-admin"}
-                          >
-                            <svg
-                              className="h-5 w-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4 flex space-x-3">
+                        <button
+                          className="text-blue-600"
+                          onClick={() => handleViewDetails(user)}
+                        >
+                          View
+                        </button>
+
+                        <button
+                          className="text-green-600"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="text-red-600"
+                          disabled={user.role === "super-admin"}
+                          onClick={() =>
+                            handleDeleteUser(user.id, user.username)
+                          }
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center">
-                      <div className="text-gray-500">
-                        {searchTerm
-                          ? "No users found matching your search."
-                          : "No users found."}
-                      </div>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-10 text-center text-gray-500"
+                    >
+                      No users found.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+
+            {/* Pagination identical to File Manager */}
+            <Pagination
+              page={page}
+              setPage={setPage}
+              len={users.length}
+              limit={limit}
+            />
           </div>
         </>
       )}
 
-      {/* User Details Modal */}
+      {/* Modals */}
       {showDetailsModal && selectedUser && (
         <DetailedUser
           setShowDetailsModal={setShowDetailsModal}
@@ -412,7 +322,6 @@ function UsersManagement() {
         />
       )}
 
-      {/* Edit User Modal */}
       {showEditModal && editingUser && (
         <EditUser
           setShowEditModal={setShowEditModal}
@@ -426,11 +335,35 @@ function UsersManagement() {
   );
 }
 
+function Pagination({ page, setPage, len, limit }) {
+  return (
+    <div className="flex justify-between items-center p-4">
+      <button
+        disabled={page === 1}
+        onClick={() => setPage(page - 1)}
+        className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+      >
+        Previous
+      </button>
+
+      <span className="text-gray-700">Page {page}</span>
+
+      <button
+        disabled={len < limit}
+        onClick={() => setPage(page + 1)}
+        className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
 export default UsersManagement;
 
-// --- Modal Components ---
-
-// NOTE: In a production app, these would be in separate files (e.g., DetailedUser.jsx, EditUser.jsx)
+/* ------------------------------------------------------------------
+   MODALS (unchanged from your structure — only formatting optimized)
+------------------------------------------------------------------- */
 
 /**
  * Detailed User View Modal

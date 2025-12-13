@@ -7,7 +7,6 @@ import {
 } from "../../api/services/userService";
 import toast from "react-hot-toast";
 
-
 // --- PASTE AvatarUploader COMPONENT DEFINITION HERE ---
 // (The full component from the section above)
 const MOCK_API_ENDPOINT = "http://localhost:8080/api/v1/auth/upload-profile";
@@ -110,26 +109,25 @@ const EditProfileModal = ({ isOpen, onClose }) => {
   const { user, setUser } = useAuth();
 
   const [input, setInput] = useState({
-    email: user?.email,
     username: user?.username,
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = await profileUpdate(input?.email, input?.username);
+      const data = await profileUpdate(input?.username);
       if (data?.user) {
         // Update user state in context with new details
-        setUser(data?.user);
-        toast.success("Profile updated successfully!");
+        setUser((pre) => ({
+          ...pre,
+          username: data?.user?.username,
+        }));
       }
-      console.log(data);
       if (data) {
         onClose();
       }
     } catch (e) {
       console.log(e);
-      toast.error("Failed to update profile.");
     }
   };
 
@@ -183,22 +181,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              onChange={(e) =>
-                setInput((prev) => ({
-                  ...prev,
-                  email: e.target.value,
-                }))
-              }
-              value={input?.email}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
+
           <div className="flex space-x-3 pt-4">
             <button
               onClick={handleClose}
@@ -233,13 +216,10 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     }
 
     try {
-      const data = await changePassword(input.password, input.new_password);
-      console.log(data);
-      toast.success("Password changed successfully!");
+      await changePassword(input.password, input.new_password);
       onClose();
     } catch (e) {
       console.log(e);
-      toast.error("Failed to change password. Check current password.");
     }
   };
   if (!isOpen) return null;

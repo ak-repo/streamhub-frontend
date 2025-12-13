@@ -34,7 +34,10 @@ import ChannelsManagement from "./pages/admin/ChannelsManagement";
 import FilesManagement from "./pages/admin/FilesManagement";
 import AdminProfile from "./pages/admin/AdminProfile";
 import { useAuth } from "./context/context";
-import Request from "./pages/user/Request";
+import UserRequests from "./pages/user/UserRequests";
+import ChannelRequests from "./pages/user/channel/ChannelRequests";
+import Payment from "./pages/user/channel/Payment";
+import Subscription from "./pages/user/channel/Subscription";
 
 /* ----------------------------------
    PROTECTED ROUTES
@@ -80,13 +83,16 @@ export default function App() {
               <Route path="/home" element={<HomeLayout />}>
                 <Route index element={<Home />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="invites" element={<Request />} />
+                <Route path="invites" element={<UserRequests />} />
               </Route>
 
-              <Route path="/channel/:id" element={<ChannelPage />}>
+              <Route path="/channel/:channelId" element={<ChannelPage />}>
                 <Route index element={<ChatArea />} />
                 <Route path="members" element={<Members />} />
                 <Route path="files" element={<Files />} />
+                <Route path="subscription" element={<Subscription />} />
+                <Route path="requests" element={<ChannelRequests />} />
+                <Route path="payment" element={<Payment />} />
                 <Route path="board" element={<Board />} />
               </Route>
             </Route>
@@ -108,3 +114,22 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
+// channelId
+// :
+// "99bffe8e-37c6-4354-bcad-ad74c54c7756"
+// content
+// :
+// "ddd"
+// createdAt
+// :
+// "1765264776360"
+// id
+// :
+// "820a2811-d1ed-432a-bb5c-b6c278fcd051"
+// senderId
+// :
+// "8bac94b4-b6bd-4064-8623-44023a96e364"
+// senderUsername
+// :
+("ak");

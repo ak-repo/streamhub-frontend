@@ -10,19 +10,22 @@ const normalizeMessage = (rawData) => {
   const objectEvent = rawData.Event;
   if (!objectEvent) return null;
 
-  const msgData = objectEvent.Created;
-  if (!msgData) return null;
-
-  if (!msgData.content) return null;
+  const msgData = objectEvent.MessageCreated;
+  if (!msgData || !msgData.content) return null;
 
   return {
-    serverId: msgData.message_id,
+    serverId: msgData.id,
     content: msgData.content,
-    timestamp_ms:
-      msgData.timestamp_ms || objectEvent.timestamp_ms || Date.now(),
+
+    // Unified timestamp
+    createdAt: Number(
+      msgData.created_at || objectEvent.timestamp || Date.now()
+    ),
+
     userId: msgData.sender_id || msgData.user_id,
-    channelId: objectEvent.channel_id,
+    channelId: objectEvent.channel_id || msgData.channel_id,
     username: msgData.username || "Unknown",
+
     isOptimistic: false,
   };
 };
@@ -75,20 +78,18 @@ export default function ChatArea() {
       try {
         const rawData = JSON.parse(event.data);
         const normalized = normalizeMessage(rawData);
-
         if (!normalized) return;
 
-        // 🔥 DEDUPLICATION + OPTIMISTIC REPLACEMENT
         setMessages((prev) => {
           if (!Array.isArray(prev)) return [normalized];
 
-          // Check if optimistic version exists
+          // Replace optimistic if matches
           const optimisticIndex = prev.findIndex(
             (m) =>
               m.isOptimistic &&
               m.userId === normalized.userId &&
               m.content === normalized.content &&
-              Math.abs(m.timestamp_ms - normalized.timestamp_ms) < 500
+              Math.abs(m.createdAt - normalized.createdAt) < 500
           );
 
           if (optimisticIndex !== -1) {
@@ -100,13 +101,13 @@ export default function ChatArea() {
             return updated;
           }
 
-          // Prevent duplicates based on (content + sender + near timestamps)
+          // Prevent duplicates
           const exists = prev.some(
             (m) =>
               !m.isOptimistic &&
               m.userId === normalized.userId &&
               m.content === normalized.content &&
-              Math.abs(m.timestamp_ms - normalized.timestamp_ms) < 500
+              Math.abs(m.createdAt - normalized.createdAt) < 500
           );
 
           if (exists) return prev;
@@ -132,11 +133,13 @@ export default function ChatArea() {
   }, [safeMessages]);
 
   /* -------------------------------------------------------------
-     SEND MESSAGE (WITH OPTIMISTIC UPDATE)
+     SEND MESSAGE + OPTIMISTIC UPDATE
   ------------------------------------------------------------- */
   const sendMessage = (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || status !== "connected") return;
+
+    const now = Date.now();
 
     const payload = {
       type: "MESSAGE",
@@ -144,26 +147,33 @@ export default function ChatArea() {
       userId: user.id,
       username: user.username || user.email || "User",
       content: inputMessage,
-      timestamp_ms: Date.now(),
-      localId: Date.now(),
+      createdAt: now,
+      localId: now,
     };
 
     socketRef.current?.send(JSON.stringify(payload));
 
-    // Optimistic append
+    // optimistic add
     setMessages((prev) => [
       ...prev,
       {
         userId: payload.userId,
         username: payload.username,
         content: payload.content,
-        timestamp_ms: payload.timestamp_ms,
+        createdAt: now,
         isOptimistic: true,
       },
     ]);
 
     setInputMessage("");
   };
+
+  /* -------------------------------------------------------------
+     Sort messages by time (ascending: oldest → newest)
+  ------------------------------------------------------------- */
+  const sortedMessages = [...safeMessages].sort(
+    (a, b) => a.createdAt - b.createdAt
+  );
 
   /* -------------------------------------------------------------
      RENDER
@@ -174,17 +184,15 @@ export default function ChatArea() {
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto bg-white dark:bg-gray-800 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
           <div className="p-4 space-y-3">
-            {safeMessages.length === 0 ? (
+            {sortedMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-12">
                 <p className="text-sm">No messages yet</p>
               </div>
             ) : (
-              safeMessages.map((msg, idx) => {
+              sortedMessages.map((msg, idx) => {
                 const senderId = msg.senderId ?? msg.userId;
-
                 const isMe = String(senderId) === String(user?.id);
 
-                // Name fix
                 let displayName = msg.username;
                 if (!displayName || displayName === "Unknown") {
                   const m = members.find(
@@ -195,7 +203,7 @@ export default function ChatArea() {
 
                 return (
                   <div
-                    key={msg.serverId || msg.timestamp_ms || idx}
+                    key={msg.serverId || msg.createdAt || idx}
                     className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                   >
                     <div
@@ -225,12 +233,13 @@ export default function ChatArea() {
                             : "text-gray-500 dark:text-gray-400"
                         }`}
                       >
-                        {msg.timestamp_ms
-                          ? new Date(msg.timestamp_ms).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "Now"}
+                        {new Date(Number(msg.createdAt)).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
                       </div>
                     </div>
                   </div>
@@ -244,7 +253,7 @@ export default function ChatArea() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex-shrink-0 p-4 bg-white dark:bg-gray-800 border-top border-gray-100 dark:border-gray-700">
         <form onSubmit={sendMessage} className="flex items-end space-x-2">
           <input
             type="text"

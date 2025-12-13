@@ -7,7 +7,7 @@ export default function Members() {
   const { members, isOwner, chanID, setRefMem } = useChannel();
 
   const [showAddInput, setShowAddInput] = useState(false);
-  const [newUserStats, setNewUserStats] = useState("");
+  const [targetUserId, setTargetUserId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,15 +21,15 @@ export default function Members() {
 
   // --- Handlers ---
 
-  const handleAddMember = async (e) => {
+  const handleInviteMember = async (e) => {
     e.preventDefault();
-    if (!newUserStats.trim()) return;
+    if (!targetUserId.trim()) return;
 
     setIsSubmitting(true);
     try {
-      await sendInvite(chanID, newUserStats);
+      await sendInvite(chanID, targetUserId);
       // setRefMem((prev) => !prev); // Refresh list
-      setNewUserStats("");
+      setTargetUserId("");
       setShowAddInput(false);
     } catch (e) {
       console.error("failed to invite user:", e);
@@ -76,28 +76,28 @@ export default function Members() {
                 : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
           >
-            {showAddInput ? "Cancel" : "Add Member"}
+            {showAddInput ? "Cancel" : "Invite Member"}
           </button>
         </div>
 
         {/* Add Member Input Form */}
         {showAddInput && (
           <form
-            onSubmit={handleAddMember}
+            onSubmit={handleInviteMember}
             className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200"
           >
             <div className="flex gap-2">
               <input
                 type="text"
-                value={newUserStats}
-                onChange={(e) => setNewUserStats(e.target.value)}
+                value={targetUserId}
+                onChange={(e) => setTargetUserId(e.target.value)}
                 placeholder="Enter User ID or Email..."
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 autoFocus
               />
               <button
                 type="submit"
-                disabled={isSubmitting || !newUserStats.trim()}
+                disabled={isSubmitting || !targetUserId.trim()}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
               >
                 {isSubmitting ? "Adding..." : "Invite"}

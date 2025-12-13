@@ -7,16 +7,15 @@ import {
 } from "../../../api/services/channelService";
 
 export default function ChannelPage() {
-  const { id } = useParams();
+  const { channelId } = useParams();
   const { setChanID, channel, members, isOwner, isMember } = useChannel();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
-    setChanID(id);
-  }, [id]);
-
+    setChanID(channelId);
+  }, [channelId]);
 
   const handleLeaveOrDelete = async () => {
     if (!user?.id || !channel) return;
@@ -30,13 +29,13 @@ export default function ChannelPage() {
             "Are you sure you want to delete this channel? This action cannot be undone."
           )
         ) {
-          await deleteChannel(channel.channelId, user.id);
+          await deleteChannel(channel?.id);
           navigate("/home");
         }
       } else {
         // Member can leave the channel
         if (window.confirm("Are you sure you want to leave this channel?")) {
-          await leaveChannel(channel?.channelId, user?.id);
+          await leaveChannel(channel?.id);
           navigate("/home");
         }
       }
@@ -98,13 +97,13 @@ export default function ChannelPage() {
               {/* Channel ID with small copy button */}
               <div className="flex items-center space-x-2">
                 <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                  {channel?.channelId || "Loading..."}
+                  {channel?.id || "Loading..."}
                 </p>
 
                 {/* Copy Button */}
                 <button
                   onClick={() =>
-                    navigator.clipboard.writeText(channel?.channelId || "")
+                    navigator.clipboard.writeText(channel?.id || "")
                   }
                   className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
                   title="Copy Channel ID"
@@ -221,6 +220,81 @@ export default function ChannelPage() {
               />
             </svg>
             <span>Board</span>
+          </NavLink>
+          <NavLink
+            to="requests"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200 ${
+                isActive
+                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-750"
+              }`
+            }
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span>Requests</span>
+          </NavLink>
+          <NavLink
+            to="payment"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200 ${
+                isActive
+                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-750"
+              }`
+            }
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span>Payment</span>
+          </NavLink>
+          <NavLink
+            to="subscription"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200 ${
+                isActive
+                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-750"
+              }`
+            }
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span>Subscription</span>
           </NavLink>
         </nav>
 

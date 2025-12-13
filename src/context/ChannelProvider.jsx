@@ -22,9 +22,8 @@ function ChannelProvider({ children }) {
   const [refFile, setRefFile] = useState(false);
   const [refMem, setRefMem] = useState(false);
 
-
   const isOwner = useMemo(() => {
-    return channel?.createdBy === user?.id;
+    return channel?.ownerId === user?.id;
   }, [channel, user?.id]);
 
   const isMember = useMemo(() => {
@@ -47,8 +46,8 @@ function ChannelProvider({ children }) {
 
     const fetchChannelInfo = async () => {
       try {
-        const { channel } = await getChannel(chanID);
-        setChannel(channel || null);
+        const data = await getChannel(chanID);
+        setChannel(data?.channel || null);
       } catch (err) {
         console.error("Fetch Channel Error:", err);
         setChannel(null);
@@ -98,7 +97,7 @@ function ChannelProvider({ children }) {
 
     const fetchFilesList = async () => {
       try {
-        const data = await listFilesByChannel(user.id, chanID);
+        const data = await listFilesByChannel(chanID);
         setFiles(Array.isArray(data?.files) ? data.files : []);
       } catch (err) {
         console.error("Fetch Files Error:", err);
