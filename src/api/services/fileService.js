@@ -23,13 +23,10 @@ export const uploadFile = async (file, channelId, isPublic) => {
     const uploadUrl = data?.uploadUrl; // changed from upload_url
     const fileId = data?.fileId; // changed from file_id
     console.log("file id:", fileId);
+    console.log("upload url: ", uploadUrl);
 
     // 2. Upload directly to S3 / MinIO
-    await axios.put(uploadUrl, file, {
-      headers: {
-        "Content-Type": file.type,
-      },
-    });
+    await axios.put(uploadUrl, file);
 
     // 3. Confirm upload
     const res = await api.post(`/files/confirm`, {
@@ -91,14 +88,12 @@ export const deleteFile = async (fileId) => {
 
 export const getStorageUsage = async (channel_id) => {
   try {
-    const res = await api.get(`/files/storage/${channel_id}`);
+    const res = await api.get(`/channels/storage/${channel_id}`);
     return res?.data;
   } catch (e) {
     handleError(e);
   }
 };
-
-
 
 //  ----------------------------------------  -------- admin specified
 export const adminListFiles = async (limit, offset) => {

@@ -28,7 +28,7 @@ const AvatarUploader = ({ userId, onSuccess }) => {
 
     try {
       const data = await UploadProfile(formData);
-      const newUrl = data?.url;
+      const newUrl = data?.avatarUrl;
 
       toast.success("Avatar uploaded successfully!");
       onSuccess(newUrl);
@@ -83,8 +83,8 @@ const AvatarUploader = ({ userId, onSuccess }) => {
         {loading
           ? "Uploading..."
           : file
-            ? `Upload ${file.name.substring(0, 10)}...`
-            : "Change Avatar"}
+          ? `Upload ${file.name.substring(0, 10)}...`
+          : "Change Avatar"}
       </button>
 
       {file && !loading && (
@@ -118,8 +118,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     }
 
     try {
-      const data = await changePassword(input.password, input.new_password);
-      console.log(data);
+      await changePassword(input.password, input.new_password);
       toast.success("Password changed successfully!");
       onClose();
     } catch (e) {
@@ -211,9 +210,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
               Cancel
             </button>
             {/* Primary Button - sky-500 background */}
-            <button
-              className="flex-1 px-4 py-2 bg-sky-500 text-white hover:bg-sky-600 transition rounded-md font-semibold"
-            >
+            <button className="flex-1 px-4 py-2 bg-sky-500 text-white hover:bg-sky-600 transition rounded-md font-semibold">
               Update Password
             </button>
           </div>
@@ -224,10 +221,9 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 };
 // --- END: Change Password Modal ---
 
-
 // --- Main Component: AdminProfile ---
 const AdminProfile = () => {
-  const { user, setUser,logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
@@ -370,10 +366,11 @@ const AdminProfile = () => {
               {/* Edit/Cancel Button - Subtle but professional */}
               <button
                 onClick={handleEditToggle}
-                className={`p-2 font-semibold text-sm transition duration-200 ${isEditing
+                className={`p-2 font-semibold text-sm transition duration-200 ${
+                  isEditing
                     ? "text-red-600 hover:bg-red-50"
                     : "text-sky-600 hover:bg-sky-50"
-                  } border border-gray-200 hover:border-sky-500 rounded-md`}
+                } border border-gray-200 hover:border-sky-500 rounded-md`}
                 title={isEditing ? "Cancel Edit" : "Edit Profile"}
               >
                 {isEditing ? "Cancel" : "Edit Profile"}
@@ -428,7 +425,9 @@ const AdminProfile = () => {
                   <div className="min-w-0 flex-1">
                     {isEditing ? (
                       <div className="space-y-3">
-                        <h3 className="text-lg font-bold text-sky-500">Editing Profile</h3>
+                        <h3 className="text-lg font-bold text-sky-500">
+                          Editing Profile
+                        </h3>
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">
                             USERNAME
@@ -546,8 +545,11 @@ const AdminProfile = () => {
                       </p>
                       <div className="flex items-center space-x-2">
                         <div
-                          className={`h-2.5 w-2.5 rounded-full ${user.status === "active" ? "bg-green-500" : "bg-gray-400"
-                            }`}
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            user.status === "active"
+                              ? "bg-green-500"
+                              : "bg-gray-400"
+                          }`}
                         ></div>
                         <p className="text-sm text-gray-800 font-medium capitalize">
                           {user.status || "Active"}
@@ -610,9 +612,7 @@ const AdminProfile = () => {
                       </svg>
                     </button>
                     {/* Action Button 2: View Activity Log */}
-                    <button
-                      className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md"
-                    >
+                    <button className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md">
                       <span className="text-sm font-medium text-gray-700">
                         View Activity Log
                       </span>
@@ -632,8 +632,7 @@ const AdminProfile = () => {
                     </button>
                     {/* Action Button 3: Log Out */}
                     <button
-
-                    onClick={logout}
+                      onClick={logout}
                       className="w-full flex items-center justify-between p-3 border border-gray-200 hover:border-sky-500 hover:bg-sky-50 transition duration-200 rounded-md"
                     >
                       <span className="text-sm font-medium text-gray-700">
@@ -683,9 +682,7 @@ const AdminProfile = () => {
                 Please sign in to access the admin features and data.
               </p>
               {/* Sign In Button - sky-500 background */}
-              <button
-                className="mt-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold px-6 py-2 transition duration-200 rounded-md"
-              >
+              <button className="mt-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold px-6 py-2 transition duration-200 rounded-md">
                 Sign In
               </button>
             </div>

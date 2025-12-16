@@ -196,7 +196,7 @@ export default function ChannelPage() {
             <span>Files</span>
           </NavLink>
 
-          <NavLink
+          {/* <NavLink
             to="board"
             className={({ isActive }) =>
               `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200 ${
@@ -220,7 +220,7 @@ export default function ChannelPage() {
               />
             </svg>
             <span>Board</span>
-          </NavLink>
+          </NavLink> */}
           <NavLink
             to="requests"
             className={({ isActive }) =>
@@ -246,7 +246,7 @@ export default function ChannelPage() {
             </svg>
             <span>Requests</span>
           </NavLink>
-          <NavLink
+          {/* <NavLink
             to="payment"
             className={({ isActive }) =>
               `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-200 ${
@@ -270,7 +270,7 @@ export default function ChannelPage() {
               />
             </svg>
             <span>Payment</span>
-          </NavLink>
+          </NavLink> */}
           <NavLink
             to="subscription"
             className={({ isActive }) =>

@@ -33,7 +33,7 @@ const AvatarUploader = ({ userId, onSuccess }) => {
       const data = await UploadProfile(formData);
       // console.log("url:,", data);
 
-      const newUrl = data.url;
+      const newUrl = data.avatarUrl;
 
       toast.success("Avatar uploaded successfully!");
       onSuccess(newUrl);
@@ -320,6 +320,7 @@ const Profile = () => {
   const { user, setUser } = useAuth();
   // New state to manage the temporary display of the avatar URL
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user?.avatar_url);
+  console.log("user: ", user);
 
   React.useEffect(() => {
     setCurrentAvatarUrl(user?.avatar_url);

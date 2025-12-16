@@ -155,6 +155,7 @@ function UsersManagement() {
     }
   };
 
+  console.log(users);
   // ==========================
   // Delete User
   // ==========================
@@ -248,7 +249,7 @@ function UsersManagement() {
 
                       {/* Status */}
                       <td className="px-6 py-4">
-                        {user.emailVerified ? "Verified" : "Unverified"}
+                        {user.isEmailVerified ? "Verified" : "Unverified"}
                         {user.isBanned && (
                           <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded">
                             Banned
@@ -443,7 +444,7 @@ const DetailedUser = ({
                     Email Status
                   </h4>
                   <div className="flex items-center">
-                    {selectedUser.emailVerified ? (
+                    {selectedUser.isEmailVerified ? (
                       <>
                         <svg
                           className="h-5 w-5 text-green-500 mr-2"
